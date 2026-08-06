@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Баланс Agent Router — остаток по API-ключу</title>
+<meta name="description" content="Статическая страница: показывает остаток на API-ключе Agent Router и траты по дням и часам.">
+<style>
+:root{
+  --bg:#0d121c;
+  --panel:#131a27;
+  --panel-2:#182131;
+  --line:#233049;
+  --line-soft:#1b2434;
+  --text:#e8ecf4;
+  --muted:#8a97ae;
+  --dim:#5b6981;
+  --amber:#f0b45f;
+  --amber-deep:#a4712c;
+  --copper:#d98756;
+  --cyan:#6fd0d6;
+  --red:#e2686c;
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono","Cascadia Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  --r:10px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  background-image:radial-gradient(1100px 620px at 12% -12%,#17223a 0%,rgba(23,34,58,0) 68%);
+  color:var(--text);
+  font:15px/1.55 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 56px;
+}
+a{color:var(--amber);text-decoration:none}
+a:hover{text-decoration:underline}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px;border-radius:4px}
+
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+
+/* ---------- header ---------- */
+.top{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;padding:30px 0 20px}
+.brand{
+  font:600 13px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;
+  color:var(--text);
+}
+.brand span{color:var(--amber)}
+.top .sub{color:var(--dim);font-size:13px}
+.top .sub a{color:var(--dim);border-bottom:1px dotted var(--line);text-decoration:none}
+.top .sub a:hover{color:var(--muted);text-decoration:none}
+
+/* ---------- cards ---------- */
+.card{
+  background:var(--panel);
+  border:1px solid var(--line-soft);
+  border-radius:var(--r);
+  margin-bottom:14px;
+}
+.card__head{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--line-soft);
+}
+.card__title{
+  font:600 11px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  margin:0;
+}
+.card__body{padding:18px}
+
+/* ---------- key form ---------- */
+.keyform{display:flex;gap:10px;flex-wrap:wrap;align-items:center;padding:16px 18px}
+.field{position:relative;flex:1 1 320px;min-width:0}
+.field input{
+  width:100%;height:44px;padding:0 76px 0 14px;
+  background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:8px;
+  font:14px/1 var(--mono);letter-spacing:.02em;
+}
+.field input::placeholder{color:var(--dim);letter-spacing:.1em}
+.field input:focus{border-color:var(--amber-deep);outline:none}
+.reveal{
+  position:absolute;right:6px;top:6px;height:32px;padding:0 10px;
+  background:transparent;color:var(--dim);border:1px solid transparent;border-radius:6px;
+  font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;cursor:pointer;
+}
+.reveal:hover{color:var(--text);border-color:var(--line)}
+.btn{
+  height:44px;padding:0 22px;cursor:pointer;
+  background:var(--amber);color:#20160a;border:1px solid var(--amber);border-radius:8px;
+  font:600 13px/1 var(--sans);letter-spacing:.02em;
+}
+.btn:hover{background:#ffc470}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn--ghost{background:transparent;color:var(--muted);border-color:var(--line)}
+.btn--ghost:hover{background:var(--panel-2);color:var(--text)}
+.remember{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;white-space:nowrap}
+.remember input{accent-color:var(--amber);width:15px;height:15px}
+
+.msg{margin:0 18px 16px;padding:11px 14px;border-radius:8px;font-size:13.5px;line-height:1.5}
+.msg--err{background:rgba(226,104,108,.09);border:1px solid rgba(226,104,108,.35);color:#f5b7b9}
+.msg--warn{background:rgba(240,180,95,.08);border:1px solid rgba(240,180,95,.3);color:#f2cd97}
+.msg--ok{background:rgba(111,208,214,.07);border:1px solid rgba(111,208,214,.28);color:#a9e4e8}
+.msg b{color:#fff}
+.hidden{display:none !important}
+
+/* ---------- settings ---------- */
+details.opts{border-top:1px solid var(--line-soft)}
+details.opts summary{
+  padding:11px 18px;cursor:pointer;color:var(--dim);
+  font:600 10px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;
+  list-style:none;
+}
+details.opts summary::-webkit-details-marker{display:none}
+details.opts summary::before{content:"+ ";color:var(--line)}
+details.opts[open] summary::before{content:"− "}
+details.opts summary:hover{color:var(--muted)}
+.opts__body{padding:4px 18px 18px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.opt{display:flex;flex-direction:column;gap:6px;flex:1 1 260px}
+.opt label{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.opt input,.opt select{
+  height:36px;padding:0 10px;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;font:13px/1 var(--mono);
+}
+.opt small{color:var(--dim);font-size:11.5px;line-height:1.4}
+
+/* ---------- gauge ---------- */
+.gauge{padding:22px 18px 18px}
+.gauge__label{font:600 10px/1 var(--mono);letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.gauge__row{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin:10px 0 18px}
+.gauge__num{
+  font:600 clamp(38px,8vw,62px)/.95 var(--mono);letter-spacing:-.02em;
+  color:var(--amber);font-variant-numeric:tabular-nums;
+}
+.gauge__num.is-low{color:var(--red)}
+.gauge__num.is-idle{color:var(--dim)}
+.gauge__of{color:var(--muted);font-size:13.5px;padding-bottom:8px}
+.gauge__of b{color:var(--text);font-family:var(--mono);font-weight:500}
+.meter{position:relative}
+.segs{display:flex;gap:3px;height:34px}
+.seg{flex:1 1 0;border-radius:2px;background:var(--line-soft);transition:background .2s}
+.seg.on{background:linear-gradient(180deg,var(--amber),var(--amber-deep))}
+.seg.on.low{background:linear-gradient(180deg,var(--red),#8e3336)}
+.seg.fill{animation:rise .3s cubic-bezier(.2,.8,.3,1) backwards;animation-delay:calc(var(--i)*7ms)}
+@keyframes rise{from{opacity:0;transform:scaleY(.25)}to{opacity:1;transform:none}}
+.ticks{display:flex;margin-top:7px;font:10px/1 var(--mono);color:var(--dim);letter-spacing:.08em}
+.ticks span{flex:1 1 0}
+.ticks span+span{text-align:center}
+.ticks span:last-child{text-align:right}
+.grant{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:15px;color:var(--muted);font-size:12.5px}
+.grant label{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.grant__cur{font:400 13px/1 var(--mono);color:var(--dim);margin-left:2px}
+.grant input{
+  width:92px;height:29px;padding:0 8px;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;
+  font:500 13px/1 var(--mono);font-variant-numeric:tabular-nums;
+}
+.grant input:focus-visible{outline:2px solid var(--amber);outline-offset:1px}
+.grant small{flex:1 1 240px;color:var(--dim);font-size:11.5px;line-height:1.4}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-soft);border-top:1px solid var(--line-soft)}
+.stat{background:var(--panel);padding:15px 18px}
+.stat dt{font:600 10px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:0 0 7px}
+.stat dd{margin:0;font:500 21px/1.1 var(--mono);font-variant-numeric:tabular-nums}
+.stat dd small{display:block;margin-top:5px;font:400 11.5px/1.3 var(--sans);color:var(--dim);font-variant-numeric:normal}
+.stat--accent dd{color:var(--cyan)}
+
+/* ---------- controls ---------- */
+.seg-ctl{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg-ctl button{
+  padding:7px 12px;background:transparent;color:var(--muted);border:0;cursor:pointer;
+  font:12px/1 var(--sans);
+}
+.seg-ctl button+button{border-left:1px solid var(--line)}
+.seg-ctl button:hover{background:var(--panel-2);color:var(--text)}
+.seg-ctl button[aria-pressed="true"]{background:var(--panel-2);color:var(--amber);font-weight:600}
+select.pick{
+  height:31px;padding:0 8px;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;font:12px/1 var(--sans);max-width:210px;
+}
+.spacer{margin-left:auto}
+.custom{display:flex;gap:8px;align-items:center;padding:0 18px 14px;color:var(--dim);font-size:12px}
+.tznote{padding:0 18px 14px;color:var(--dim);font-size:11.5px;line-height:1.45}
+.custom input{
+  height:31px;padding:0 8px;background:var(--bg);color:var(--text);
+  border:1px solid var(--line);border-radius:7px;font:12px/1 var(--mono);
+}
+
+/* ---------- chart ---------- */
+.chart{position:relative;padding:18px 18px 0}
+.chart__grid{position:relative;height:190px;border-bottom:1px solid var(--line)}
+.gridline{position:absolute;left:56px;right:0;border-top:1px dashed var(--line-soft);z-index:0}
+.gridline span{position:absolute;right:100%;top:-6px;padding-right:9px;white-space:nowrap;color:var(--dim);font:10px/1 var(--mono)}
+.bars{position:absolute;top:0;right:0;bottom:0;left:56px;z-index:1;display:flex;align-items:flex-end;gap:2px;overflow-x:auto;overflow-y:hidden}
+.bar{flex:1 0 4px;min-width:4px;height:100%;display:flex;align-items:flex-end;cursor:crosshair}
+.bar i{display:block;width:100%;background:var(--copper);border-radius:2px 2px 0 0;min-height:0;transition:background .15s}
+.bar.zero i{background:var(--line-soft);height:2px !important;min-height:2px}
+.bar:hover i{background:var(--amber)}
+.bar.peak i{background:linear-gradient(180deg,var(--amber),var(--copper))}
+.xaxis{display:flex;justify-content:space-between;padding:8px 0 16px 56px;font:10px/1 var(--mono);color:var(--dim);letter-spacing:.06em}
+.tip{
+  position:absolute;pointer-events:none;z-index:5;transform:translate(-50%,-100%);
+  background:#0a0e16;border:1px solid var(--line);border-radius:7px;padding:8px 11px;
+  font:12px/1.5 var(--mono);white-space:nowrap;box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+.tip b{color:var(--amber);font-weight:600}
+.tip em{display:block;font-style:normal;color:var(--dim);font-size:11px}
+
+/* ---------- table ---------- */
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{
+  text-align:left;padding:9px 18px;color:var(--dim);border-bottom:1px solid var(--line-soft);
+  font:600 10px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;white-space:nowrap;
+}
+td{padding:9px 18px;border-bottom:1px solid var(--line-soft);white-space:nowrap;font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--panel-2)}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+td.model{font-family:var(--mono);color:var(--cyan);font-size:12.5px}
+td.time{color:var(--muted);font-family:var(--mono);font-size:12.5px}
+.empty{padding:34px 18px;text-align:center;color:var(--dim);font-size:13.5px}
+.more{padding:11px 18px;color:var(--dim);font-size:12px;border-top:1px solid var(--line-soft)}
+
+/* ---------- footer ---------- */
+.foot{color:var(--dim);font-size:12.5px;line-height:1.65;padding:8px 2px}
+.foot b{color:var(--muted);font-weight:600}
+
+.skeleton{color:var(--dim)}
+@media (max-width:820px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:560px){
+  .wrap{padding:0 14px}
+  .card__body,.gauge,.chart{padding-left:14px;padding-right:14px}
+  .keyform{padding:14px}
+  .stat{padding:13px 14px}
+  th,td{padding:8px 14px}
+  .btn{flex:1 1 auto}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important;transition:none !important}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">SAPHIROFF<span>·</span>FUNPAY — остаток</div>
+    <div class="sub">Ключ уходит только на <a href="https://agentrouter.org/console" target="_blank" rel="noopener">agentrouter.org</a>, сервера у страницы нет</div>
+  </header>
+
+  <!-- ключ -->
+  <section class="card">
+    <form class="keyform" id="form" autocomplete="off">
+      <div class="field">
+        <input id="key" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off"
+               aria-label="API-ключ Agent Router">
+        <button type="button" class="reveal" id="reveal" aria-label="Показать ключ">показать</button>
+      </div>
+      <button class="btn" id="submit" type="submit">Проверить</button>
+      <button class="btn btn--ghost hidden" id="forget" type="button">Забыть ключ</button>
+      <label class="remember"><input type="checkbox" id="remember"> запомнить в браузере</label>
+    </form>
+
+    <div class="msg msg--err hidden" id="err"></div>
+    <div class="msg msg--warn hidden" id="warn"></div>
+
+    <details class="opts">
+      <summary>Настройки подключения</summary>
+      <div class="opts__body">
+        <div class="opt">
+          <label for="base">Адрес сервиса</label>
+          <select id="base">
+            <option value="https://agentrouter.org">https://agentrouter.org</option>
+            <option value="https://ps.air-outer.com">https://ps.air-outer.com (зеркало)</option>
+          </select>
+        </div>
+        <div class="opt">
+          <label for="proxy">CORS-прокси (не обязательно)</label>
+          <input id="proxy" type="text" placeholder="https://proxy.example/{url}" spellcheck="false">
+          <small>Нужен, только если браузер блокирует запрос. Прокси увидит ваш ключ — используйте свой.</small>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <!-- баланс -->
+  <section class="card" id="balanceCard">
+    <div class="gauge">
+      <div class="gauge__label">Остаток на ключе</div>
+      <div class="gauge__row">
+        <div class="gauge__num is-idle" id="remain">$—</div>
+        <div class="gauge__of" id="remainOf">вставьте ключ, чтобы увидеть баланс</div>
+      </div>
+      <div class="meter">
+        <div class="segs" id="segs" role="img" aria-label="Шкала остатка"></div>
+        <div class="ticks"><span>0%</span><span>50%</span><span>100%</span></div>
+      </div>
+      <div class="grant hidden" id="grantRow">
+        <label for="grant">Выдано на ключ</label>
+        <span class="grant__cur">$</span>
+        <input id="grant" type="number" min="0" step="0.01" value="175" inputmode="decimal">
+        <small>Сервис не сообщает лимит этого ключа, поэтому остаток считается от суммы пополнения. Поправьте, если у вас другая.</small>
+      </div>
+    </div>
+    <dl class="stats">
+      <div class="stat"><dt>Потрачено за 24 ч</dt><dd id="s24" class="skeleton">—</dd></div>
+      <div class="stat"><dt>Потрачено за 7 дней</dt><dd id="s7" class="skeleton">—</dd></div>
+      <div class="stat"><dt>Запросов всего</dt><dd id="sreq" class="skeleton">—</dd></div>
+      <div class="stat stat--accent"><dt>Хватит примерно на</dt><dd id="sfc" class="skeleton">—</dd></div>
+    </dl>
+  </section>
+
+  <!-- график -->
+  <section class="card">
+    <div class="card__head">
+      <h2 class="card__title">Траты</h2>
+      <div class="seg-ctl" id="granCtl" role="group" aria-label="Шаг графика">
+        <button type="button" data-gran="hour" aria-pressed="false">по часам</button>
+        <button type="button" data-gran="day" aria-pressed="true">по дням</button>
+      </div>
+      <div class="seg-ctl spacer" id="rangeCtl" role="group" aria-label="Период">
+        <button type="button" data-range="24h" aria-pressed="false">24 ч</button>
+        <button type="button" data-range="7d" aria-pressed="true">7 дней</button>
+        <button type="button" data-range="30d" aria-pressed="false">30 дней</button>
+        <button type="button" data-range="all" aria-pressed="false">всё</button>
+        <button type="button" data-range="custom" aria-pressed="false">период</button>
+      </div>
+      <select class="pick" id="modelPick" aria-label="Модель"><option value="all">Все модели</option></select>
+    </div>
+    <div class="custom hidden" id="customRow">
+      <label for="from">с</label><input id="from" type="date">
+      <label for="to">по</label><input id="to" type="date">
+    </div>
+    <div class="chart">
+      <div class="chart__grid" id="grid">
+        <div class="bars" id="bars"></div>
+      </div>
+      <div class="xaxis"><span id="xa"></span><span id="xb"></span></div>
+    </div>
+    <div class="tznote" id="tznote"></div>
+    <div class="stats" style="border-top:1px solid var(--line-soft)">
+      <div class="stat"><dt>За период</dt><dd id="pSum" class="skeleton">—</dd></div>
+      <div class="stat"><dt>Запросов</dt><dd id="pReq" class="skeleton">—</dd></div>
+      <div class="stat"><dt>Средний запрос</dt><dd id="pAvg" class="skeleton">—</dd></div>
+      <div class="stat"><dt>Пик</dt><dd id="pPeak" class="skeleton">—</dd></div>
+    </div>
+  </section>
+
+  <!-- таблица -->
+  <section class="card">
+    <div class="card__head">
+      <h2 class="card__title">Последние запросы</h2>
+      <span class="spacer" style="color:var(--dim);font-size:12px" id="updated"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr>
+          <th>Время</th><th>Модель</th>
+          <th class="num">Вход</th><th class="num">Выход</th><th class="num">Ответ</th><th class="num">Стоимость</th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="tblEmpty">Здесь появятся запросы после проверки ключа.</div>
+    <div class="more hidden" id="tblMore"></div>
+  </section>
+
+  <p class="foot">
+    Страница статическая: ключ хранится только в вашем браузере и отправляется напрямую в Agent Router.
+    Баланс берётся из <b>/dashboard/billing</b>, история — из <b>/api/log/token</b>.
+    Суммы считаются по курсу <b id="qpu">500&nbsp;000</b> единиц квоты за $1.
+  </p>
+</div>
+
+<script id="core">
+/* Чистые функции: считают деньги и раскладывают логи по корзинам. Тестируются отдельно. */
+(function (root) {
+  'use strict';
+  var C = {};
+  var DAY = 86400000;
+
+  C.DEFAULT_QUOTA_PER_UNIT = 500000;
+  C.DEFAULT_GRANT = 175;
+  /* Для ключа без собственного лимита сервис отдаёт метку-заглушку в сотню миллионов.
+     Всё, что выше этого порога, балансом считать нельзя. */
+  C.SENTINEL_USD = 1000000;
+  C.isSaneLimit = function (v) { var n = Number(v); return isFinite(n) && n > 0 && n < C.SENTINEL_USD; };
+
+  /* Сколько записей всего — если сборка отдаёт логи страницами. */
+  C.pageMeta = function (payload) {
+    var d = payload && payload.data;
+    var o = (d && !Array.isArray(d) && typeof d === 'object') ? d : payload;
+    if (!o || typeof o !== 'object') return { total: null };
+    var t = o.total != null ? o.total : (o.count != null ? o.count : null);
+    /* Number(null) — это ноль, а ноль здесь означал бы «записей нет» и обрывал листание. */
+    if (t == null || t === '') return { total: null };
+    t = Number(t);
+    return { total: isFinite(t) && t >= 0 ? t : null };
+  };
+
+  /* Сообщения движка new-api приходят по-китайски — переводим известные. */
+  var DICT = [
+    [/未提供令牌/, 'Ключ не передан'],
+    [/无效的令牌|令牌验证失败/, 'Ключ недействителен'],
+    [/令牌已过期/, 'Срок действия ключа истёк'],
+    [/该令牌状态不可用|令牌已被禁用/, 'Ключ отключён'],
+    [/额度不足|余额不足/, 'Недостаточно средств на ключе'],
+    [/用户已被封禁|用户状态不可用/, 'Аккаунт заблокирован']
+  ];
+  C.cleanMessage = function (msg) {
+    var s = String(msg || '').replace(/\s*\(request id:[^)]*\)/i, '').trim();
+    for (var i = 0; i < DICT.length; i++) if (DICT[i][0].test(s)) return DICT[i][1];
+    return s;
+  };
+
+  C.toMs = function (v) {
+    var n = Number(v) || 0;
+    if (!n) return 0;
+    return n > 1e12 ? n : n * 1000;
+  };
+
+  /* Приводим ответ /api/log/token к плоскому виду; форма data отличается между версиями. */
+  C.normalizeLogs = function (payload, quotaPerUnit) {
+    var qpu = Number(quotaPerUnit) || C.DEFAULT_QUOTA_PER_UNIT;
+    var raw = payload && payload.data !== undefined ? payload.data : payload;
+    if (raw && !Array.isArray(raw)) raw = raw.items || raw.records || raw.logs || raw.data || [];
+    if (!Array.isArray(raw)) raw = [];
+    var out = [];
+    for (var i = 0; i < raw.length; i++) {
+      var r = raw[i] || {};
+      var ts = C.toMs(r.created_at != null ? r.created_at : r.createdAt);
+      if (!ts) continue;
+      var quota = Number(r.quota) || 0;
+      out.push({
+        id: r.id != null ? 'i' + r.id : ts + '|' + (r.model_name || '') + '|' + quota + '|' + (r.prompt_tokens || 0),
+        ts: ts,
+        model: r.model_name || r.modelName || '—',
+        quota: quota,
+        usd: quota / qpu,
+        pt: Number(r.prompt_tokens) || 0,
+        ct: Number(r.completion_tokens) || 0,
+        useTime: Number(r.use_time) || 0,
+        type: Number(r.type != null ? r.type : 2),
+        tokenName: r.token_name || ''
+      });
+    }
+    out.sort(function (a, b) { return b.ts - a.ts; });
+    return out;
+  };
+
+  /* type: 1 — пополнение, 2 — расход, 3 — админ, 4 — система, 5 — ошибка. */
+  C.isSpend = function (l) { return l.type === 2 || (l.type !== 1 && l.type !== 3 && l.type !== 4 && l.quota > 0); };
+  C.spendOnly = function (logs) { return logs.filter(C.isSpend); };
+
+  C.sum = function (logs) {
+    var t = 0;
+    for (var i = 0; i < logs.length; i++) t += logs[i].usd;
+    return t;
+  };
+
+  C.since = function (logs, from, to) {
+    return logs.filter(function (l) { return l.ts >= from && l.ts <= to; });
+  };
+
+  C.bucketStart = function (ts, gran) {
+    var d = new Date(ts);
+    d.setMinutes(0, 0, 0);
+    if (gran === 'day') d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+
+  /* Границы периода. now передаётся явно, чтобы тесты были воспроизводимы. */
+  C.rangeBounds = function (range, logs, custom, now) {
+    now = now || Date.now();
+    var oldest = logs && logs.length ? logs[logs.length - 1].ts : now - 6 * DAY;
+    switch (range) {
+      case '24h': return [now - DAY, now];
+      case '30d': return [C.bucketStart(now - 29 * DAY, 'day'), now];
+      case 'all': return [C.bucketStart(oldest, 'day'), now];
+      case 'custom': {
+        var from = custom && custom.from ? custom.from : '';
+        var to = custom && custom.to ? custom.to : '';
+        /* Даты могли ввести задом наперёд: сначала расставляем по порядку и только
+           потом растягиваем до начала и конца суток, иначе границы окажутся обрезаны. */
+        if (from && to && to < from) { var s = from; from = to; to = s; }
+        var a = from ? new Date(from + 'T00:00:00').getTime() : NaN;
+        var b = to ? new Date(to + 'T23:59:59.999').getTime() : NaN;
+        if (!a || isNaN(a)) a = C.bucketStart(now - 6 * DAY, 'day');
+        if (!b || isNaN(b)) b = now;
+        if (b < a) { var t = a; a = b; b = t; }
+        return [a, b];
+      }
+      default: return [C.bucketStart(now - 6 * DAY, 'day'), now];
+    }
+  };
+
+  /* Непрерывный ряд корзин, включая пустые: провалы в тратах — это тоже информация.
+     Шаг двигаем методами Date, чтобы переход на летнее время не сдвигал сетку. */
+  C.bucketize = function (logs, from, to, gran, maxBuckets) {
+    var cap = maxBuckets || 1500;
+    var map = {}, keys = [];
+    var cur = new Date(C.bucketStart(from, gran));
+    var end = C.bucketStart(to, gran);
+    while (cur.getTime() <= end && keys.length < cap) {
+      var k = cur.getTime();
+      keys.push(k);
+      map[k] = { t: k, usd: 0, count: 0 };
+      if (gran === 'hour') cur.setHours(cur.getHours() + 1); else cur.setDate(cur.getDate() + 1);
+    }
+    for (var i = 0; i < logs.length; i++) {
+      var l = logs[i];
+      if (l.ts < from || l.ts > to) continue;
+      var b = map[C.bucketStart(l.ts, gran)];
+      if (!b) continue;
+      b.usd += l.usd;
+      b.count += 1;
+    }
+    return keys.map(function (k) { return map[k]; });
+  };
+
+  C.modelTotals = function (logs) {
+    var m = {};
+    for (var i = 0; i < logs.length; i++) {
+      var l = logs[i];
+      if (!m[l.model]) m[l.model] = { model: l.model, usd: 0, count: 0 };
+      m[l.model].usd += l.usd;
+      m[l.model].count += 1;
+    }
+    return Object.keys(m).map(function (k) { return m[k]; })
+      .sort(function (a, b) { return b.usd - a.usd || b.count - a.count; });
+  };
+
+  /* Темп трат за последние 7 суток -> на сколько хватит остатка. */
+  C.forecast = function (logs, remain, now) {
+    now = now || Date.now();
+    var week = C.sum(C.since(logs, now - 7 * DAY, now));
+    var perDay = week / 7;
+    if (!(perDay > 0) || !(remain > 0)) return { perDay: perDay, days: null, until: null };
+    var days = remain / perDay;
+    return { perDay: perDay, days: days, until: new Date(now + Math.min(days, 3650) * DAY) };
+  };
+
+  C.usd = function (v, dp) {
+    var n = Number(v) || 0;
+    if (dp == null) dp = 2;
+    /* Знак ставим перед долларом: −$12.50 читается, $-12.50 — нет. */
+    var s = Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+    return (n < 0 ? '−$' : '$') + s;
+  };
+  /* Мелкие суммы за один запрос теряются при двух знаках — показываем до четырёх,
+     но без хвостовых нулей: $0.50, а не $0.5000. Совсем копеечные не выдаём за ноль. */
+  C.usdSmart = function (v) {
+    var n = Number(v) || 0;
+    if (n === 0) return '$0';
+    if (Math.abs(n) < 0.0001) return (n < 0 ? '−' : '') + '<$0.0001';
+    if (Math.abs(n) < 1) return C.usd(n, 4).replace(/(\.\d{2,}?)0+$/, '$1');
+    return C.usd(n, 2);
+  };
+  C.num = function (v) { return (Number(v) || 0).toLocaleString('ru-RU'); };
+
+  C.plural = function (n, one, few, many) {
+    var a = Math.abs(Math.round(n)) % 100, b = a % 10;
+    if (a > 10 && a < 20) return many;
+    if (b > 1 && b < 5) return few;
+    if (b === 1) return one;
+    return many;
+  };
+
+  root.ARB = C;
+})(typeof window !== 'undefined' ? window : globalThis);
+</script>
+
+<script id="app">
+(function () {
+  'use strict';
+  var C = window.ARB;
+  var $ = function (id) { return document.getElementById(id); };
+  var LS_KEY = 'arb.key', LS_BASE = 'arb.base', LS_PROXY = 'arb.proxy', LS_GRANT = 'arb.grant';
+
+  var state = {
+    key: '', base: 'https://agentrouter.org', proxy: '',
+    qpu: C.DEFAULT_QUOTA_PER_UNIT,
+    grant: C.DEFAULT_GRANT,
+    billing: null, logs: [], spend: [],
+    range: '7d', gran: 'day', model: 'all',
+    custom: { from: '', to: '' },
+    loading: false
+  };
+
+  /* ---------- сеть ---------- */
+  function buildUrl(path) {
+    var target = state.base.replace(/\/+$/, '') + path;
+    if (!state.proxy) return target;
+    var p = state.proxy.trim();
+    return p.indexOf('{url}') >= 0 ? p.replace('{url}', encodeURIComponent(target)) : p.replace(/\/+$/, '') + '/' + target;
+  }
+
+  function ApiError(message, status) { this.name = 'ApiError'; this.message = message; this.status = status; }
+  ApiError.prototype = Object.create(Error.prototype);
+
+  async function get(path, auth) {
+    var headers = { 'Accept': 'application/json' };
+    if (auth) headers['Authorization'] = 'Bearer ' + state.key;
+    var res;
+    try {
+      res = await fetch(buildUrl(path), { headers: headers, cache: 'no-store', credentials: 'omit' });
+    } catch (e) {
+      throw new ApiError('Браузер не смог связаться с ' + hostLabel() + '. Проверьте интернет и блокировщики, ' +
+        'либо выберите зеркало в настройках подключения.', 0);
+    }
+    var text = await res.text();
+    var data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { /* не JSON — обработаем ниже */ }
+    if (!res.ok) {
+      var m = (data && data.error && data.error.message) || (data && data.message) || ('HTTP ' + res.status);
+      throw new ApiError(C.cleanMessage(m), res.status);
+    }
+    if (data === null) throw new ApiError('Сервис вернул не JSON — возможно, запрос перехватил прокси или капча.', res.status);
+    return data;
+  }
+
+  function hostLabel() {
+    try { return new URL(state.base).host; } catch (e) { return state.base; }
+  }
+
+  /* Эндпоинт логов в разных сборках ведёт себя по-разному: одна отдаёт всю историю разом,
+     другая режет на страницы своего размера и игнорирует наш page_size. Поэтому не гадаем
+     по длине страницы, а листаем, пока приходят новые записи. */
+  async function loadLogs() {
+    var seen = {}, out = [], size = 200, total = null, pages = 0;
+    for (var p = 1; p <= 60; p++) {
+      var payload = await get('/api/log/token?key=' + encodeURIComponent(state.key) +
+        '&p=' + p + '&page=' + p + '&page_size=' + size + '&pageSize=' + size +
+        '&size=' + size + '&limit=' + size + '&offset=' + ((p - 1) * size), false);
+      pages++;
+      var meta = C.pageMeta(payload);
+      if (meta.total != null) total = meta.total;
+      var rows = C.normalizeLogs(payload, state.qpu);
+      if (!rows.length) break;
+      var added = 0;
+      for (var i = 0; i < rows.length; i++) {
+        if (!seen[rows[i].id]) { seen[rows[i].id] = 1; out.push(rows[i]); added++; }
+      }
+      if (!added) break;                                  /* пришло то же самое — страниц больше нет */
+      if (total != null && out.length >= total) break;
+    }
+    out.sort(function (a, b) { return b.ts - a.ts; });
+    return { logs: out, total: total, pages: pages };
+  }
+
+  async function loadBilling() {
+    var today = new Date(), start = new Date(Date.now() - 400 * 86400000);
+    var iso = function (d) { return d.toISOString().slice(0, 10); };
+    var sub = await get('/v1/dashboard/billing/subscription', true);
+    var use = await get('/dashboard/billing/usage?start_date=' + iso(start) + '&end_date=' + iso(today), true);
+    var limit = Number(sub.hard_limit_usd);
+    if (!C.isSaneLimit(limit)) limit = Number(sub.system_hard_limit_usd);
+    var spent = (Number(use.total_usage) || 0) / 100;
+    return {
+      spent: spent,
+      limit: C.isSaneLimit(limit) ? limit : null,   /* null = сервис лимита не сообщил */
+      accessUntil: C.toMs(sub.access_until)
+    };
+  }
+
+  /* ---------- основной сценарий ---------- */
+  async function check() {
+    if (state.loading) return;
+    state.key = $('key').value.trim();
+    if (!state.key) { showErr('Вставьте ключ — сервис выдаёт его в консоли, строка вида sk-…'); $('key').focus(); return; }
+    if (!/^sk-/.test(state.key)) showWarn('Ключ обычно начинается с <b>sk-</b>. Если скопировали не целиком, баланс не найдётся.');
+    else hide('warn');
+    hide('err');
+
+    setLoading(true);
+    persist();
+
+    var results = await Promise.allSettled([get('/api/status', false), loadBilling(), loadLogs()]);
+    var st = results[0], bl = results[1], lg = results[2];
+
+    if (st.status === 'fulfilled' && st.value && st.value.data && st.value.data.quota_per_unit) {
+      state.qpu = Number(st.value.data.quota_per_unit) || state.qpu;
+      $('qpu').textContent = C.num(state.qpu);
+    }
+
+    /* Ключ невалиден — дальше показывать нечего. */
+    if (bl.status === 'rejected' && (bl.reason.status === 401 || bl.reason.status === 403)) {
+      setLoading(false);
+      showErr('Ключ не принят: ' + bl.reason.message + '. Скопируйте его заново в ' +
+        '<a href="' + state.base + '/console/token" target="_blank" rel="noopener">консоли Agent Router</a>.');
+      resetView();
+      return;
+    }
+    if (lg.status === 'rejected' && bl.status === 'rejected') {
+      setLoading(false);
+      showErr(bl.reason.message);
+      resetView();
+      return;
+    }
+
+    state.billing = bl.status === 'fulfilled' ? bl.value : null;
+    /* Пересчитываем в доллары по фактическому курсу квоты — /api/status мог его уточнить. */
+    var box = lg.status === 'fulfilled' ? lg.value : { logs: [], total: null, pages: 0 };
+    state.logs = box.logs;
+    state.logsTotal = box.total;
+    state.logs.forEach(function (l) { l.usd = l.quota / state.qpu; });
+    state.spend = C.spendOnly(state.logs);
+
+    var notes = [];
+    if (bl.status === 'rejected') notes.push('Баланс получить не удалось (' + bl.reason.message + ') — ниже только история трат.');
+    if (lg.status === 'rejected') notes.push('История запросов недоступна (' + lg.reason.message + ') — график пуст.');
+
+    /* Сверка: сумма по истории должна сходиться с тем, что насчитал сервис.
+       Если нет — часть запросов не попала в историю, и график занижает траты. */
+    if (state.billing && lg.status === 'fulfilled' && state.spend.length) {
+      var byLog = C.sum(state.spend), byService = state.billing.spent;
+      if (byService > 0 && Math.abs(byService - byLog) > Math.max(0.02, byService * 0.005)) {
+        notes.push('История неполная: по запросам набирается <b>' + C.usdSmart(byLog) +
+          '</b>, а сервис насчитал <b>' + C.usdSmart(byService) + '</b>. ' +
+          'Остаток посчитан по данным сервиса и верен, а вот график и разбивка по дням занижены.');
+      }
+    }
+    if (notes.length) showWarn(notes.join('<br>')); else hide('warn');
+
+    setLoading(false);
+    renderAll();
+  }
+
+  function setLoading(on) {
+    state.loading = on;
+    $('submit').disabled = on;
+    $('submit').textContent = on ? 'Читаю…' : 'Проверить';
+  }
+
+  function persist() {
+    try {
+      if ($('remember').checked) localStorage.setItem(LS_KEY, state.key);
+      else localStorage.removeItem(LS_KEY);
+      localStorage.setItem(LS_BASE, state.base);
+      localStorage.setItem(LS_GRANT, String(state.grant));
+      if (state.proxy) localStorage.setItem(LS_PROXY, state.proxy); else localStorage.removeItem(LS_PROXY);
+    } catch (e) { /* приватный режим — просто не сохраняем */ }
+    $('forget').classList.toggle('hidden', !$('remember').checked);
+  }
+
+  /* ---------- отрисовка ---------- */
+  function renderAll() { renderBalance(); renderChart(); renderTable(); }
+
+  function resetView() {
+    state.billing = null; state.logs = []; state.spend = []; state.logsTotal = null;
+    $('remain').textContent = '$—';
+    $('remain').className = 'gauge__num is-idle';
+    $('remainOf').textContent = 'вставьте ключ, чтобы увидеть баланс';
+    $('grantRow').classList.add('hidden');
+    drawSegs(0, false);
+    ['s24', 's7', 'sreq', 'sfc', 'pSum', 'pReq', 'pAvg', 'pPeak'].forEach(function (id) { $(id).textContent = '—'; });
+    $('bars').innerHTML = ''; $('rows').innerHTML = '';
+    $('tblEmpty').classList.remove('hidden');
+    $('tblMore').classList.add('hidden');
+    $('tznote').textContent = '';
+    $('updated').textContent = '';
+  }
+
+  var SEG_COUNT = 48;
+  function drawSegs(pct, animate) {
+    var on = Math.round(Math.max(0, Math.min(1, pct)) * SEG_COUNT);
+    var low = pct < 0.1;
+    var html = '';
+    for (var i = 0; i < SEG_COUNT; i++) {
+      var cls = 'seg' + (i < on ? ' on' + (low ? ' low' : '') + (animate ? ' fill' : '') : '');
+      html += '<div class="' + cls + '" style="--i:' + i + '"></div>';
+    }
+    $('segs').innerHTML = html;
+    $('segs').setAttribute('aria-label', 'Остаток ' + Math.round(pct * 100) + '% от выданного объёма');
+  }
+
+  function renderBalance() {
+    var b = state.billing, now = Date.now();
+    /* Сервис отдаёт лимит только у ключей с собственной квотой. У обычного ключа там
+       метка-заглушка, поэтому считаем от суммы гранта, которую можно поправить руками. */
+    var fromApi = b && b.limit != null;
+    var grant = fromApi ? b.limit : state.grant;
+    var spent = b ? b.spent : C.sum(state.spend);
+    var remain = grant - spent;
+
+    $('grantRow').classList.toggle('hidden', fromApi || !b);
+    /* Не перебиваем поле, пока в нём печатают. */
+    if (document.activeElement !== $('grant')) $('grant').value = state.grant;
+
+    if (b && grant > 0) {
+      var pct = Math.max(0, remain) / grant;
+      $('remain').textContent = C.usdSmart(remain);
+      $('remain').className = 'gauge__num' + (pct < 0.1 ? ' is-low' : '');
+      var parts = [(fromApi ? 'лимит ключа' : 'выдано') + ' <b>' + C.usd(grant) + '</b>',
+                   'потрачено <b>' + C.usd(spent) + '</b>',
+                   '<b>' + Math.round(pct * 100) + '%</b> осталось'];
+      if (b.accessUntil > 0) parts.push('ключ действует до <b>' + fmtDate(b.accessUntil) + '</b>');
+      $('remainOf').innerHTML = parts.join(' · ');
+      drawSegs(pct, true);
+    } else {
+      $('remain').textContent = C.usdSmart(C.sum(state.spend));
+      $('remain').className = 'gauge__num is-idle';
+      $('remainOf').textContent = 'это сумма трат по истории — остаток сервис не отдал';
+      drawSegs(0, false);
+    }
+
+    var d24 = C.sum(C.since(state.spend, now - 86400000, now));
+    var d7 = C.sum(C.since(state.spend, now - 7 * 86400000, now));
+    $('s24').textContent = C.usdSmart(d24);
+    $('s7').textContent = C.usdSmart(d7);
+    $('sreq').innerHTML = C.num(state.spend.length) +
+      (state.spend.length ? '<small>первый — ' + fmtDate(state.spend[state.spend.length - 1].ts) + '</small>' : '');
+
+    var f = b && remain > 0 ? C.forecast(state.spend, remain, now) : { days: null, perDay: 0 };
+    if (f.days == null) {
+      $('sfc').innerHTML = '—<small>' + (b && remain > 0 ? 'за неделю трат не было' : 'нужен остаток и история') + '</small>';
+    } else if (f.days > 365) {
+      $('sfc').innerHTML = '&gt; года<small>' + C.usdSmart(f.perDay) + ' в день</small>';
+    } else {
+      var d = Math.floor(f.days);
+      $('sfc').innerHTML = C.num(d) + ' ' + C.plural(d, 'день', 'дня', 'дней') +
+        '<small>' + C.usdSmart(f.perDay) + ' в день · до ' + fmtDate(f.until.getTime(), true) + '</small>';
+    }
+
+    var models = C.modelTotals(state.spend);
+    var pick = $('modelPick'), prev = state.model;
+    pick.innerHTML = '<option value="all">Все модели</option>' + models.map(function (m) {
+      return '<option value="' + esc(m.model) + '">' + esc(m.model) + ' — ' + C.usdSmart(m.usd) + '</option>';
+    }).join('');
+    pick.value = models.some(function (m) { return m.model === prev; }) ? prev : 'all';
+    state.model = pick.value;
+
+    $('updated').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function filtered() {
+    return state.model === 'all' ? state.spend : state.spend.filter(function (l) { return l.model === state.model; });
+  }
+
+  function renderChart() {
+    var bounds = C.rangeBounds(state.range, state.spend, state.custom, Date.now());
+    var logs = filtered();
+    var buckets = C.bucketize(logs, bounds[0], bounds[1], state.gran);
+    var max = 0, sum = 0, req = 0, peak = null;
+    buckets.forEach(function (b) {
+      if (b.usd > max) { max = b.usd; peak = b; }
+      sum += b.usd; req += b.count;
+    });
+
+    var scale = max > 0 ? max : 1;
+    $('bars').innerHTML = buckets.map(function (b) {
+      var h = b.usd > 0 ? Math.max(2, (b.usd / scale) * 100) : 0;
+      return '<div class="bar' + (b.usd > 0 ? '' : ' zero') + (peak && b.t === peak.t && b.usd > 0 ? ' peak' : '') +
+        '" data-t="' + b.t + '" data-usd="' + b.usd + '" data-c="' + b.count + '">' +
+        '<i style="height:' + h.toFixed(2) + '%"></i></div>';
+    }).join('');
+
+    $('grid').querySelectorAll('.gridline').forEach(function (n) { n.remove(); });
+    [1, 0.5].forEach(function (frac) {
+      var el = document.createElement('div');
+      el.className = 'gridline';
+      el.style.top = ((1 - frac) * 100) + '%';
+      el.innerHTML = '<span>' + C.usdSmart(scale * frac) + '</span>';
+      $('grid').appendChild(el);
+    });
+
+    $('xa').textContent = buckets.length ? fmtBucket(buckets[0].t, state.gran, true) : '';
+    $('xb').textContent = buckets.length ? fmtBucket(buckets[buckets.length - 1].t, state.gran, true) : '';
+
+    $('pSum').textContent = C.usdSmart(sum);
+    $('pReq').textContent = C.num(req);
+    $('pAvg').textContent = req ? C.usdSmart(sum / req) : '—';
+    $('pPeak').innerHTML = peak && peak.usd > 0
+      ? C.usdSmart(peak.usd) + '<small>' + fmtBucket(peak.t, state.gran) + '</small>'
+      : '—';
+
+    $('tznote').innerHTML = state.spend.length
+      ? 'Запросы разложены по вашему часовому поясу — ' + tzLabel() +
+        '. В консоли Agent Router сутки считаются по времени сервера, поэтому границы дней могут не совпадать.' +
+        (state.logsTotal != null ? ' Загружено записей: ' + C.num(state.logs.length) + ' из ' + C.num(state.logsTotal) + '.' : '')
+      : '';
+  }
+
+  function tzLabel() {
+    var off = -new Date().getTimezoneOffset(), sign = off < 0 ? '−' : '+';
+    var h = Math.floor(Math.abs(off) / 60), m = Math.abs(off) % 60;
+    var utc = 'UTC' + sign + h + (m ? ':' + (m < 10 ? '0' + m : m) : '');
+    var name = '';
+    try { name = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+    return name ? name + ' (' + utc + ')' : utc;
+  }
+
+  function renderTable() {
+    var logs = filtered().slice(0, 100);
+    if (!logs.length) {
+      $('rows').innerHTML = '';
+      $('tblEmpty').textContent = state.spend.length
+        ? 'По выбранной модели запросов нет.'
+        : 'Запросов по этому ключу пока нет.';
+      $('tblEmpty').classList.remove('hidden');
+      $('tblMore').classList.add('hidden');
+      return;
+    }
+    $('tblEmpty').classList.add('hidden');
+    $('rows').innerHTML = logs.map(function (l) {
+      return '<tr><td class="time">' + fmtDate(l.ts, false, true) + '</td>' +
+        '<td class="model">' + esc(l.model) + '</td>' +
+        '<td class="num">' + C.num(l.pt) + '</td>' +
+        '<td class="num">' + C.num(l.ct) + '</td>' +
+        '<td class="num">' + (l.useTime ? l.useTime + ' с' : '—') + '</td>' +
+        '<td class="num">' + C.usdSmart(l.usd) + '</td></tr>';
+    }).join('');
+    var total = filtered().length;
+    $('tblMore').classList.toggle('hidden', total <= 100);
+    $('tblMore').textContent = 'Показаны 100 последних из ' + C.num(total) + '.';
+  }
+
+  /* ---------- форматирование ---------- */
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtDate(ts, dateOnly, withSec) {
+    var o = { day: 'numeric', month: 'short' };
+    var d = new Date(ts);
+    if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
+    if (!dateOnly) { o.hour = '2-digit'; o.minute = '2-digit'; if (withSec) o.second = '2-digit'; }
+    return d.toLocaleString('ru-RU', o);
+  }
+  function fmtBucket(ts, gran, short) {
+    var d = new Date(ts);
+    if (gran === 'hour') {
+      return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    }
+    return d.toLocaleDateString('ru-RU', short ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'long' });
+  }
+
+  /* ---------- подсказка на графике ---------- */
+  var tip = null;
+  function showTip(bar) {
+    if (!tip) { tip = document.createElement('div'); tip.className = 'tip'; $('grid').parentNode.appendChild(tip); }
+    var usd = Number(bar.dataset.usd), c = Number(bar.dataset.c), t = Number(bar.dataset.t);
+    tip.innerHTML = '<b>' + C.usdSmart(usd) + '</b> · ' + C.num(c) + ' ' + C.plural(c, 'запрос', 'запроса', 'запросов') +
+      '<em>' + fmtBucket(t, state.gran) + '</em>';
+    var wrapBox = $('grid').parentNode.getBoundingClientRect(), b = bar.getBoundingClientRect();
+    tip.style.left = (b.left - wrapBox.left + b.width / 2) + 'px';
+    tip.style.top = (b.top - wrapBox.top - 8) + 'px';
+    tip.style.display = 'block';
+  }
+  function hideTip() { if (tip) tip.style.display = 'none'; }
+
+  /* ---------- события ---------- */
+  $('form').addEventListener('submit', function (e) { e.preventDefault(); check(); });
+
+  $('reveal').addEventListener('click', function () {
+    var i = $('key'), show = i.type === 'password';
+    i.type = show ? 'text' : 'password';
+    this.textContent = show ? 'скрыть' : 'показать';
+    this.setAttribute('aria-label', show ? 'Скрыть ключ' : 'Показать ключ');
+  });
+
+  $('remember').addEventListener('change', function () {
+    if (state.key || $('key').value) persist();
+    $('forget').classList.toggle('hidden', !this.checked);
+  });
+
+  $('forget').addEventListener('click', function () {
+    try { localStorage.removeItem(LS_KEY); } catch (e) {}
+    $('key').value = ''; state.key = '';
+    $('remember').checked = false;
+    this.classList.add('hidden');
+    resetView();
+    hide('err'); hide('warn');
+    $('key').focus();
+  });
+
+  $('base').addEventListener('change', function () { state.base = this.value; persist(); if (state.key) check(); });
+  $('proxy').addEventListener('change', function () { state.proxy = this.value.trim(); persist(); });
+
+  /* Сумму пополнения правят руками — пересчитываем остаток, не дёргая сеть. */
+  $('grant').addEventListener('input', function () {
+    var v = Number(this.value);
+    state.grant = isFinite(v) && v > 0 ? v : C.DEFAULT_GRANT;
+    persist();
+    renderBalance();
+  });
+
+  $('granCtl').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    state.gran = b.dataset.gran;
+    press('granCtl', 'gran', state.gran);
+    renderChart();
+  });
+
+  $('rangeCtl').addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    state.range = b.dataset.range;
+    press('rangeCtl', 'range', state.range);
+    $('customRow').classList.toggle('hidden', state.range !== 'custom');
+    /* Час имеет смысл на коротком окне; на длинном сам переключаемся на дни. */
+    if (state.range === '24h' && state.gran !== 'hour') { state.gran = 'hour'; press('granCtl', 'gran', 'hour'); }
+    if ((state.range === '30d' || state.range === 'all') && state.gran === 'hour') { state.gran = 'day'; press('granCtl', 'gran', 'day'); }
+    renderChart();
+  });
+
+  function press(ctl, attr, val) {
+    Array.prototype.forEach.call($(ctl).children, function (b) {
+      b.setAttribute('aria-pressed', String(b.dataset[attr] === val));
+    });
+  }
+
+  ['from', 'to'].forEach(function (id) {
+    $(id).addEventListener('change', function () {
+      state.custom[id] = this.value;
+      if (state.range !== 'custom') { state.range = 'custom'; press('rangeCtl', 'range', 'custom'); $('customRow').classList.remove('hidden'); }
+      renderChart();
+    });
+  });
+
+  $('modelPick').addEventListener('change', function () { state.model = this.value; renderChart(); renderTable(); });
+
+  $('bars').addEventListener('mouseover', function (e) { var b = e.target.closest('.bar'); if (b) showTip(b); });
+  $('bars').addEventListener('mouseleave', hideTip);
+  $('bars').addEventListener('scroll', hideTip);
+
+  function showErr(html) { $('err').innerHTML = html; $('err').classList.remove('hidden'); }
+  function showWarn(html) { $('warn').innerHTML = html; $('warn').classList.remove('hidden'); }
+  function hide(id) { $(id).classList.add('hidden'); }
+
+  /* ---------- старт ---------- */
+  (function init() {
+    drawSegs(0, false);
+    var d = new Date(), pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    var iso = function (x) { return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); };
+    $('to').value = iso(d);
+    $('from').value = iso(new Date(Date.now() - 6 * 86400000));
+    state.custom = { from: $('from').value, to: $('to').value };
+
+    try {
+      var savedBase = localStorage.getItem(LS_BASE);
+      if (savedBase) { state.base = savedBase; $('base').value = savedBase; }
+      var savedProxy = localStorage.getItem(LS_PROXY);
+      if (savedProxy) { state.proxy = savedProxy; $('proxy').value = savedProxy; }
+      var savedGrant = Number(localStorage.getItem(LS_GRANT));
+      if (isFinite(savedGrant) && savedGrant > 0) state.grant = savedGrant;
+      $('grant').value = state.grant;
+      var savedKey = localStorage.getItem(LS_KEY);
+      if (savedKey) {
+        $('key').value = savedKey;
+        $('remember').checked = true;
+        $('forget').classList.remove('hidden');
+        check();
+      }
+    } catch (e) { /* localStorage недоступен — работаем без сохранения */ }
+  })();
+})();
+</script>
+</body>
+</html>
