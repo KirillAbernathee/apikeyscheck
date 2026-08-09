@@ -1,0 +1,303 @@
+<script id="i18n">
+/* Строки интерфейса на двух языках. Тексты инструкций живут отдельно, в блоке guides.
+   {0}, {1} — места для подстановки; T('key', a, b) подставит их по порядку.
+   Множественное число задаётся массивом форм: в русском их три (день/дня/дней),
+   в английском две (day/days). Какую взять — решает _plural своего языка. */
+window.ARI = {
+
+ru: {
+  _locale: 'ru-RU',
+  /* Русское правило: 1 день, 2 дня, 5 дней; 11-14 — всегда последняя форма. */
+  _plural: function (n, f) {
+    var a = Math.abs(Math.round(n)) % 100, b = a % 10;
+    if (a > 10 && a < 20) return f[2];
+    if (b > 1 && b < 5) return f[1];
+    if (b === 1) return f[0];
+    return f[2];
+  },
+  langName: 'Русский',
+  htmlLang: 'ru',
+  title: 'Остаток на ключе Agent Router',
+  metaDesc: 'Проверка остатка API-ключа Agent Router: баланс в долларах, траты по дням и часам, инструкции по подключению к 15 программам.',
+
+  /* выбор языка */
+  pickLangTitle: 'Выберите язык',
+  pickLangSub: 'Language',
+  pickRu: 'Русский',
+  pickEn: 'English',
+  switchLang: 'Язык',
+  switchTo: 'Switch to English',
+
+  /* шапка */
+  brandTail: 'остаток',
+  brandSub: 'Ключ уходит только на agentrouter.org, сервера у страницы нет',
+  topLink: 'Как подключить ключ →',
+
+  /* форма ключа */
+  keyAria: 'API-ключ Agent Router',
+  reveal: 'показать',
+  hide: 'скрыть',
+  revealAria: 'Показать ключ',
+  hideAria: 'Скрыть ключ',
+  submit: 'Проверить',
+  submitBusy: 'Читаю…',
+  forget: 'Забыть ключ',
+  remember: 'запомнить в браузере',
+
+  /* настройки подключения */
+  optsSummary: 'Настройки подключения',
+  optBase: 'Адрес сервиса',
+  optMirror: 'зеркало',
+  optProxy: 'CORS-прокси (не обязательно)',
+  optProxyHint: 'Нужен, только если браузер блокирует запрос. Прокси увидит ваш ключ — используйте свой.',
+
+  /* баланс */
+  gaugeLabel: 'Остаток на ключе',
+  gaugeIdle: 'вставьте ключ, чтобы увидеть баланс',
+  meterAria: 'Шкала остатка',
+  meterAriaVal: 'Остаток {0}% от выданного объёма',
+  grantLabel: 'Выдано на ключ',
+  exactSummary: 'Брать точную сумму со счёта',
+  exactText: 'По одному <b>api key</b> сервис отдаёт только траты: сколько всего вам начислено, знает лишь сам аккаунт. Чтобы страница читала сумму со счёта, добавьте <b>access token</b> — в консоли Agent Router откройте личные настройки (Personal settings) и нажмите «Сгенерировать системный токен доступа» (Generate system access token).',
+  tokAria: 'Токен доступа к консоли Agent Router',
+  tokApply: 'Применить',
+  tokDrop: 'Убрать',
+  tokHint: 'Токен открывает доступ к аккаунту, поэтому уходит туда же, куда и ключ, — только на agentrouter.org. В браузере сохраняется вместе с ключом, если включена галочка «запомнить».',
+
+  st24: 'Потрачено за 24 ч',
+  st7: 'Потрачено за 7 дней',
+  streq: 'Запросов всего',
+  stfc: 'Хватит примерно на',
+
+  /* инструкции */
+  guidesTitle: 'Как подключить ключ',
+  guidesCount: ['{0} программа', '{0} программы', '{0} программ'],
+  cheat1: '<b>Модели Claude</b> (<code>claude-opus-…</code>) идут по протоколу Anthropic — адрес <code>https://agentrouter.org</code>, <u>без</u> <code>/v1</code>.',
+  cheat2: '<b>Остальные модели</b> (<code>gpt-…</code>, <code>glm-…</code>) — по OpenAI-совместимому протоколу, адрес <code>https://agentrouter.org/v1</code>, <u>с</u> <code>/v1</code>.',
+  cheat3: 'Исключения из этого правила всего два: <b>Kilo Code</b> просит <code>/v1</code> всегда, а <b>Trae</b> — никогда.',
+  guideMine: 'Ваш ключ уже подставлен в поля и команды ниже — их можно копировать как есть.',
+  copy: 'копировать',
+  copied: 'скопировано',
+
+  /* график */
+  chartTitle: 'Траты',
+  granAria: 'Шаг графика',
+  granHour: 'по часам',
+  granDay: 'по дням',
+  rangeAria: 'Период',
+  r24h: '24 ч',
+  r7d: '7 дней',
+  r30d: '30 дней',
+  rall: 'всё',
+  rcustom: 'период',
+  modelAria: 'Модель',
+  allModels: 'Все модели',
+  dateFrom: 'с',
+  dateTo: 'по',
+  pSum: 'За период',
+  pReq: 'Запросов',
+  pAvg: 'Средний запрос',
+  pPeak: 'Пик',
+
+  /* таблица */
+  tblTitle: 'Последние запросы',
+  thTime: 'Время',
+  thModel: 'Модель',
+  thIn: 'Вход',
+  thOut: 'Выход',
+  thResp: 'Ответ',
+  thCost: 'Стоимость',
+  tblEmpty: 'Здесь появятся запросы после проверки ключа.',
+  tblMore: 'Показаны 100 последних из {0}.',
+  emptyModel: 'По выбранной модели запросов нет.',
+  emptyAll: 'Запросов по этому ключу пока нет.',
+  updated: 'обновлено {0}',
+  secShort: 'с',
+
+  /* подвал */
+  foot: 'Страница статическая: ключ хранится только в вашем браузере и отправляется напрямую в Agent Router. Баланс берётся из <b>/dashboard/billing</b>, история — из <b>/api/log/token</b>. Суммы считаются по курсу <b id="qpu">500&nbsp;000</b> единиц квоты за $1.',
+
+  /* сообщения */
+  errNoKey: 'Вставьте ключ — сервис выдаёт его в консоли, строка вида sk-…',
+  warnPrefix: 'Ключ обычно начинается с <b>sk-</b>. Если скопировали не целиком, баланс не найдётся.',
+  errRejected: 'Ключ не принят: {0}. Скопируйте его заново в консоли Agent Router.',
+  errNoNet: 'Браузер не смог связаться с {0}. Проверьте интернет и блокировщики, либо выберите зеркало в настройках подключения.',
+  errNotJson: 'Сервис вернул не JSON — возможно, запрос перехватил прокси или капча.',
+  noteBalance: 'Баланс получить не удалось ({0}) — ниже только история трат.',
+  noteLogs: 'История запросов недоступна ({0}) — график пуст.',
+  noteTokParse: 'Токен доступа приняли, но ответ разобрать не вышло — сумма выдачи посчитана приблизительно.',
+  noteTokBad: 'Токен доступа не принят ({0}) — сумма выдачи посчитана приблизительно. Сгенерируйте его заново в личных настройках консоли.',
+  noteGap: 'История неполная: по запросам набирается <b>{0}</b>, а сервис насчитал <b>{1}</b>. Остаток посчитан по данным сервиса и верен, а вот график и разбивка по дням занижены.',
+
+  /* подписи под цифрами */
+  ofLimit: 'лимит ключа ',
+  ofGrant: 'выдано ',
+  ofSpent: 'потрачено <b>{0}</b>',
+  ofLeft: '<b>{0}%</b> осталось',
+  ofUntil: 'ключ действует до <b>{0}</b>',
+  ofNoBalance: 'это сумма трат по истории — остаток сервис не отдал',
+  firstReq: 'первый — {0}',
+  fcNoWeek: 'за неделю трат не было',
+  fcNeed: 'нужен остаток и история',
+  fcYear: '&gt; года',
+  perDay: '{0} в день',
+  fcUntil: '{0} в день · до {1}',
+  days: ['день', 'дня', 'дней'],
+  reqs: ['запрос', 'запроса', 'запросов'],
+  grantAccount: 'Точная сумма — прочитана с вашего счёта по токену доступа.',
+  grantManual: 'Вписано вручную. Сервис не сообщает по ключу, сколько всего вам выдали.',
+  grantOutgrown: 'Потрачено больше, чем было указано ({0}), — похоже, кредитов начислили ещё. Поставил {1}, поправьте, если знаете точную сумму.',
+  grantGuess: 'Оценка: старт $175. Поправьте поле или добавьте токен доступа ниже.',
+  tzNote: 'Запросы разложены по вашему часовому поясу — {0}. В консоли Agent Router сутки считаются по времени сервера, поэтому границы дней могут не совпадать.',
+  tzLoaded: ' Загружено записей: {0} из {1}.',
+  keyStub: 'sk-ВАШ-КЛЮЧ',
+
+  /* ошибки движка, приходят по-китайски */
+  apiNoToken: 'Ключ не передан',
+  apiBadToken: 'Ключ недействителен',
+  apiExpired: 'Срок действия ключа истёк',
+  apiDisabled: 'Ключ отключён',
+  apiNoFunds: 'Недостаточно средств на ключе',
+  apiBanned: 'Аккаунт заблокирован'
+},
+
+en: {
+  _locale: 'en-US',
+  /* Английский обходится двумя формами: 1 day, 2 days. */
+  _plural: function (n, f) { return Math.abs(Math.round(n)) === 1 ? f[0] : f[1]; },
+  langName: 'English',
+  htmlLang: 'en',
+  title: 'Agent Router key balance',
+  metaDesc: 'Check the balance of an Agent Router API key: dollars left, spending by day and hour, and setup guides for 15 programs.',
+
+  pickLangTitle: 'Choose a language',
+  pickLangSub: 'Язык',
+  pickRu: 'Русский',
+  pickEn: 'English',
+  switchLang: 'Language',
+  switchTo: 'Переключить на русский',
+
+  brandTail: 'balance',
+  brandSub: 'The key goes only to agentrouter.org, this page has no server',
+  topLink: 'How to connect the key →',
+
+  keyAria: 'Agent Router API key',
+  reveal: 'show',
+  hide: 'hide',
+  revealAria: 'Show the key',
+  hideAria: 'Hide the key',
+  submit: 'Check',
+  submitBusy: 'Reading…',
+  forget: 'Forget the key',
+  remember: 'remember in this browser',
+
+  optsSummary: 'Connection settings',
+  optBase: 'Service address',
+  optMirror: 'mirror',
+  optProxy: 'CORS proxy (optional)',
+  optProxyHint: 'Needed only if the browser blocks the request. The proxy will see your key, so use one of your own.',
+
+  gaugeLabel: 'Left on the key',
+  gaugeIdle: 'paste a key to see the balance',
+  meterAria: 'Balance scale',
+  meterAriaVal: '{0}% of the granted amount left',
+  grantLabel: 'Granted to the key',
+  exactSummary: 'Read the exact amount from the account',
+  exactText: 'For a single <b>api key</b> the service reports spending only: how much was granted in total is known to the account itself. To let the page read that amount, add an <b>access token</b>: in the Agent Router console open Personal settings and press Generate system access token.',
+  tokAria: 'Agent Router console access token',
+  tokApply: 'Apply',
+  tokDrop: 'Remove',
+  tokHint: 'The token opens access to the account, so it goes where the key goes, to agentrouter.org and nowhere else. It is saved in the browser together with the key if the remember box is ticked.',
+
+  st24: 'Spent in 24 h',
+  st7: 'Spent in 7 days',
+  streq: 'Requests total',
+  stfc: 'Enough for about',
+
+  guidesTitle: 'How to connect the key',
+  guidesCount: ['{0} program', '{0} programs'],
+  cheat1: '<b>Claude models</b> (<code>claude-opus-…</code>) use the Anthropic protocol: address <code>https://agentrouter.org</code>, <u>without</u> <code>/v1</code>.',
+  cheat2: '<b>Other models</b> (<code>gpt-…</code>, <code>glm-…</code>) use the OpenAI compatible protocol: address <code>https://agentrouter.org/v1</code>, <u>with</u> <code>/v1</code>.',
+  cheat3: 'There are only two exceptions: <b>Kilo Code</b> always wants <code>/v1</code>, and <b>Trae</b> never does.',
+  guideMine: 'Your key is already filled into the fields and commands below, so you can copy them as they are.',
+  copy: 'copy',
+  copied: 'copied',
+
+  chartTitle: 'Spending',
+  granAria: 'Chart step',
+  granHour: 'by hour',
+  granDay: 'by day',
+  rangeAria: 'Period',
+  r24h: '24 h',
+  r7d: '7 days',
+  r30d: '30 days',
+  rall: 'all',
+  rcustom: 'custom',
+  modelAria: 'Model',
+  allModels: 'All models',
+  dateFrom: 'from',
+  dateTo: 'to',
+  pSum: 'In the period',
+  pReq: 'Requests',
+  pAvg: 'Average request',
+  pPeak: 'Peak',
+
+  tblTitle: 'Latest requests',
+  thTime: 'Time',
+  thModel: 'Model',
+  thIn: 'In',
+  thOut: 'Out',
+  thResp: 'Reply',
+  thCost: 'Cost',
+  tblEmpty: 'Requests will show up here once the key is checked.',
+  tblMore: 'Showing the latest 100 of {0}.',
+  emptyModel: 'No requests for the selected model.',
+  emptyAll: 'No requests on this key yet.',
+  updated: 'updated {0}',
+  secShort: 's',
+
+  foot: 'The page is static: the key is kept in your browser only and goes straight to Agent Router. The balance comes from <b>/dashboard/billing</b>, the history from <b>/api/log/token</b>. Amounts are counted at <b id="qpu">500&nbsp;000</b> quota units per $1.',
+
+  errNoKey: 'Paste a key. The service issues it in the console, a line that looks like sk-…',
+  warnPrefix: 'A key usually starts with <b>sk-</b>. If it was copied only in part, the balance will not be found.',
+  errRejected: 'The key was not accepted: {0}. Copy it again in the Agent Router console.',
+  errNoNet: 'The browser could not reach {0}. Check the internet and any blockers, or pick the mirror in the connection settings.',
+  errNotJson: 'The service returned something that is not JSON. A proxy or a captcha may have intercepted the request.',
+  noteBalance: 'The balance could not be fetched ({0}), so only the spending history is below.',
+  noteLogs: 'The request history is unavailable ({0}), so the chart is empty.',
+  noteTokParse: 'The access token was accepted, but its answer could not be parsed, so the granted amount is an estimate.',
+  noteTokBad: 'The access token was not accepted ({0}), so the granted amount is an estimate. Generate a new one in the personal settings of the console.',
+  noteGap: 'The history is incomplete: the requests add up to <b>{0}</b>, while the service counted <b>{1}</b>. The balance is taken from the service data and is correct, but the chart and the per-day split are understated.',
+
+  ofLimit: 'key limit ',
+  ofGrant: 'granted ',
+  ofSpent: 'spent <b>{0}</b>',
+  ofLeft: '<b>{0}%</b> left',
+  ofUntil: 'the key works until <b>{0}</b>',
+  ofNoBalance: 'this is the spending from the history, the service did not report a balance',
+  firstReq: 'first one: {0}',
+  fcNoWeek: 'nothing was spent this week',
+  fcNeed: 'a balance and a history are needed',
+  fcYear: '&gt; a year',
+  perDay: '{0} a day',
+  fcUntil: '{0} a day · until {1}',
+  days: ['day', 'days'],
+  reqs: ['request', 'requests'],
+  grantAccount: 'The exact amount, read from your account with the access token.',
+  grantManual: 'Filled in by hand. For a single key the service does not report how much was granted in total.',
+  grantOutgrown: 'More was spent than the amount given ({0}), so more credits were probably added. I set {1}, correct it if you know the exact number.',
+  grantGuess: 'An estimate starting at $175. Correct the field or add an access token below.',
+  tzNote: 'Requests are laid out in your time zone, {0}. In the Agent Router console a day is counted by server time, so the day boundaries may differ.',
+  tzLoaded: ' Records loaded: {0} of {1}.',
+  keyStub: 'sk-YOUR-KEY',
+
+  apiNoToken: 'The key was not sent',
+  apiBadToken: 'The key is invalid',
+  apiExpired: 'The key has expired',
+  apiDisabled: 'The key is switched off',
+  apiNoFunds: 'Not enough funds on the key',
+  apiBanned: 'The account is blocked'
+}
+
+};
+</script>

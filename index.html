@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
 <title>Баланс Agent Router — остаток по API-ключу</title>
-<meta name="description" content="Статическая страница: показывает остаток на API-ключе Agent Router и траты по дням и часам.">
+<meta name="description" id="metaDesc" content="Статическая страница: показывает остаток на API-ключе Agent Router и траты по дням и часам.">
 <style>
 :root{
   --bg:#0d121c;
@@ -48,6 +48,7 @@ a:hover{text-decoration:underline}
   color:var(--text);
 }
 .brand span{color:var(--amber)}
+.brand i{font-style:normal;color:var(--dim)}
 .top .sub{color:var(--dim);font-size:13px}
 .top .sub a{color:var(--dim);border-bottom:1px dotted var(--line);text-decoration:none}
 .top .sub a:hover{color:var(--muted);text-decoration:none}
@@ -57,6 +58,24 @@ a:hover{text-decoration:underline}
   padding:7px 13px;border:1px solid var(--amber-deep);border-radius:999px;
 }
 .top__link:hover{background:rgba(240,180,95,.1);text-decoration:none}
+/* Переключатель языка: тот же вид, что у кнопок периода, только мельче. */
+.lang{align-self:center;flex:0 0 auto}
+.lang button{padding:6px 11px;font:600 11px/1 var(--mono);letter-spacing:.1em}
+
+/* ---------- выбор языка при входе ---------- */
+.langgate{
+  position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;
+  padding:20px;background:rgba(10,11,13,.86);backdrop-filter:blur(3px);
+}
+.langgate.hidden{display:none}
+.langgate__box{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;
+  padding:30px 34px;text-align:center;max-width:400px;width:100%;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.langgate__title{color:var(--text);font-size:15px;line-height:1.5;margin-bottom:20px}
+.langgate__btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.langgate__btn{min-width:130px}
 
 /* ---------- cards ---------- */
 .card{
@@ -343,41 +362,44 @@ code{
 <div class="wrap">
 
   <header class="top">
-    <div class="brand">SAPHIROFF<span>·</span>KIRILLABERNATHEE — остаток</div>
-    <div class="sub">Ключ уходит только на agentrouter.org, сервера у страницы нет</div>
-    <a class="top__link" href="#guides">Как подключить ключ →</a>
+    <div class="brand" id="brand">SAPHIROFF<span>·</span>KIRILLABERNATHEE <i id="brandTail"></i></div>
+    <div class="sub" id="brandSub"></div>
+    <a class="top__link" id="topLink" href="#guides"></a>
+    <div class="seg-ctl lang" id="langCtl" role="group">
+      <button type="button" data-lang="ru" aria-pressed="true">RU</button>
+      <button type="button" data-lang="en" aria-pressed="false">EN</button>
+    </div>
   </header>
 
   <!-- ключ -->
   <section class="card">
     <form class="keyform" id="form" autocomplete="off">
       <div class="field">
-        <input id="key" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off"
-               aria-label="API-ключ Agent Router">
-        <button type="button" class="reveal" id="reveal" aria-label="Показать ключ">показать</button>
+        <input id="key" type="password" placeholder="sk-..." spellcheck="false" autocomplete="off">
+        <button type="button" class="reveal" id="reveal"></button>
       </div>
-      <button class="btn" id="submit" type="submit">Проверить</button>
-      <button class="btn btn--ghost hidden" id="forget" type="button">Забыть ключ</button>
-      <label class="remember"><input type="checkbox" id="remember"> запомнить в браузере</label>
+      <button class="btn" id="submit" type="submit"></button>
+      <button class="btn btn--ghost hidden" id="forget" type="button"></button>
+      <label class="remember"><input type="checkbox" id="remember"> <span id="rememberTxt"></span></label>
     </form>
 
     <div class="msg msg--err hidden" id="err"></div>
     <div class="msg msg--warn hidden" id="warn"></div>
 
     <details class="opts">
-      <summary>Настройки подключения</summary>
+      <summary id="optsSummary"></summary>
       <div class="opts__body">
         <div class="opt">
-          <label for="base">Адрес сервиса</label>
+          <label for="base" id="baseLbl"></label>
           <select id="base">
             <option value="https://agentrouter.org">https://agentrouter.org</option>
-            <option value="https://ps.air-outer.com">https://ps.air-outer.com (зеркало)</option>
+            <option value="https://ps.air-outer.com" id="baseMirror">https://ps.air-outer.com</option>
           </select>
         </div>
         <div class="opt">
-          <label for="proxy">CORS-прокси (не обязательно)</label>
+          <label for="proxy" id="proxyLbl"></label>
           <input id="proxy" type="text" placeholder="https://proxy.example/{url}" spellcheck="false">
-          <small>Нужен, только если браузер блокирует запрос. Прокси увидит ваш ключ — используйте свой.</small>
+          <small id="proxyHint"></small>
         </div>
       </div>
     </details>
@@ -386,57 +408,53 @@ code{
   <!-- баланс -->
   <section class="card" id="balanceCard">
     <div class="gauge">
-      <div class="gauge__label">Остаток на ключе</div>
+      <div class="gauge__label" id="gaugeLabel"></div>
       <div class="gauge__row">
         <div class="gauge__num is-idle" id="remain">$—</div>
-        <div class="gauge__of" id="remainOf">вставьте ключ, чтобы увидеть баланс</div>
+        <div class="gauge__of" id="remainOf"></div>
       </div>
       <div class="meter">
-        <div class="segs" id="segs" role="img" aria-label="Шкала остатка"></div>
+        <div class="segs" id="segs" role="img"></div>
         <div class="ticks"><span>0%</span><span>50%</span><span>100%</span></div>
       </div>
       <div class="grant hidden" id="grantRow">
-        <label for="grant">Выдано на ключ</label>
+        <label for="grant" id="grantLbl"></label>
         <span class="grant__cur">$</span>
         <input id="grant" type="number" min="0" step="0.01" value="175" inputmode="decimal">
         <small id="grantNote"></small>
         <details class="exact" id="exactBox">
-          <summary>Брать точную сумму со счёта</summary>
+          <summary id="exactSummary"></summary>
           <div class="exact__body">
-            <p>По одному <b>api key</b> сервис отдаёт только траты: сколько всего вам начислено, знает лишь сам аккаунт.
-               Чтобы страница читала сумму со счёта, добавьте <b>access token</b> — в консоли Agent Router откройте личные
-               настройки (Personal settings) и нажмите «Сгенерировать системный токен доступа» (Generate system access token).</p>
+            <p id="exactText"></p>
             <div class="exact__row">
-              <input id="tok" type="password" placeholder="access token" spellcheck="false" autocomplete="off"
-                     aria-label="Токен доступа к консоли Agent Router">
-              <button class="btn btn--sm" id="tokApply" type="button">Применить</button>
-              <button class="btn btn--ghost btn--sm hidden" id="tokDrop" type="button">Убрать</button>
+              <input id="tok" type="password" placeholder="access token" spellcheck="false" autocomplete="off">
+              <button class="btn btn--sm" id="tokApply" type="button"></button>
+              <button class="btn btn--ghost btn--sm hidden" id="tokDrop" type="button"></button>
             </div>
-            <small>Токен открывает доступ к аккаунту, поэтому уходит туда же, куда и ключ, — только на agentrouter.org.
-                   В браузере сохраняется вместе с ключом, если включена галочка «запомнить».</small>
+            <small id="tokHint"></small>
           </div>
         </details>
       </div>
     </div>
     <dl class="stats">
-      <div class="stat"><dt>Потрачено за 24 ч</dt><dd id="s24" class="skeleton">—</dd></div>
-      <div class="stat"><dt>Потрачено за 7 дней</dt><dd id="s7" class="skeleton">—</dd></div>
-      <div class="stat"><dt>Запросов всего</dt><dd id="sreq" class="skeleton">—</dd></div>
-      <div class="stat stat--accent"><dt>Хватит примерно на</dt><dd id="sfc" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="st24"></dt><dd id="s24" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="st7"></dt><dd id="s7" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="streq"></dt><dd id="sreq" class="skeleton">—</dd></div>
+      <div class="stat stat--accent"><dt id="stfc"></dt><dd id="sfc" class="skeleton">—</dd></div>
     </dl>
   </section>
 
   <!-- инструкции -->
   <section class="card card--wide" id="guides">
     <div class="card__head">
-      <h2 class="card__title">Как подключить ключ</h2>
+      <h2 class="card__title" id="guidesTitle"></h2>
       <span class="card__note spacer" id="guidesCount"></span>
     </div>
 
     <div class="cheat">
-      <p><b>Модели Claude</b> (<code>claude-opus-…</code>) идут по протоколу Anthropic — адрес <code>https://agentrouter.org</code>, <u>без</u> <code>/v1</code>.</p>
-      <p><b>Остальные модели</b> (<code>gpt-…</code>, <code>glm-…</code>) — по OpenAI-совместимому протоколу, адрес <code>https://agentrouter.org/v1</code>, <u>с</u> <code>/v1</code>.</p>
-      <p>Исключения из этого правила всего два: <b>Kilo Code</b> просит <code>/v1</code> всегда, а <b>Trae</b> — никогда.</p>
+      <p id="cheat1"></p>
+      <p id="cheat2"></p>
+      <p id="cheat3"></p>
     </div>
 
     <div class="picker" id="picker"></div>
@@ -446,23 +464,23 @@ code{
   <!-- график -->
   <section class="card">
     <div class="card__head">
-      <h2 class="card__title">Траты</h2>
-      <div class="seg-ctl" id="granCtl" role="group" aria-label="Шаг графика">
-        <button type="button" data-gran="hour" aria-pressed="false">по часам</button>
-        <button type="button" data-gran="day" aria-pressed="true">по дням</button>
+      <h2 class="card__title" id="chartTitle"></h2>
+      <div class="seg-ctl" id="granCtl" role="group">
+        <button type="button" data-gran="hour" aria-pressed="false" id="granHour"></button>
+        <button type="button" data-gran="day" aria-pressed="true" id="granDay"></button>
       </div>
-      <div class="seg-ctl spacer" id="rangeCtl" role="group" aria-label="Период">
-        <button type="button" data-range="24h" aria-pressed="false">24 ч</button>
-        <button type="button" data-range="7d" aria-pressed="true">7 дней</button>
-        <button type="button" data-range="30d" aria-pressed="false">30 дней</button>
-        <button type="button" data-range="all" aria-pressed="false">всё</button>
-        <button type="button" data-range="custom" aria-pressed="false">период</button>
+      <div class="seg-ctl spacer" id="rangeCtl" role="group">
+        <button type="button" data-range="24h" aria-pressed="false" id="r24h"></button>
+        <button type="button" data-range="7d" aria-pressed="true" id="r7d"></button>
+        <button type="button" data-range="30d" aria-pressed="false" id="r30d"></button>
+        <button type="button" data-range="all" aria-pressed="false" id="rall"></button>
+        <button type="button" data-range="custom" aria-pressed="false" id="rcustom"></button>
       </div>
-      <select class="pick" id="modelPick" aria-label="Модель"><option value="all">Все модели</option></select>
+      <select class="pick" id="modelPick"></select>
     </div>
     <div class="custom hidden" id="customRow">
-      <label for="from">с</label><input id="from" type="date">
-      <label for="to">по</label><input id="to" type="date">
+      <label for="from" id="dateFrom"></label><input id="from" type="date">
+      <label for="to" id="dateTo"></label><input id="to" type="date">
     </div>
     <div class="chart">
       <div class="chart__grid" id="grid">
@@ -472,38 +490,340 @@ code{
     </div>
     <div class="tznote" id="tznote"></div>
     <div class="stats" style="border-top:1px solid var(--line-soft)">
-      <div class="stat"><dt>За период</dt><dd id="pSum" class="skeleton">—</dd></div>
-      <div class="stat"><dt>Запросов</dt><dd id="pReq" class="skeleton">—</dd></div>
-      <div class="stat"><dt>Средний запрос</dt><dd id="pAvg" class="skeleton">—</dd></div>
-      <div class="stat"><dt>Пик</dt><dd id="pPeak" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="pSumL"></dt><dd id="pSum" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="pReqL"></dt><dd id="pReq" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="pAvgL"></dt><dd id="pAvg" class="skeleton">—</dd></div>
+      <div class="stat"><dt id="pPeakL"></dt><dd id="pPeak" class="skeleton">—</dd></div>
     </div>
   </section>
 
   <!-- таблица -->
   <section class="card">
     <div class="card__head">
-      <h2 class="card__title">Последние запросы</h2>
+      <h2 class="card__title" id="tblTitle"></h2>
       <span class="spacer" style="color:var(--dim);font-size:12px" id="updated"></span>
     </div>
     <div class="tbl-scroll">
       <table>
         <thead><tr>
-          <th>Время</th><th>Модель</th>
-          <th class="num">Вход</th><th class="num">Выход</th><th class="num">Ответ</th><th class="num">Стоимость</th>
+          <th id="thTime"></th><th id="thModel"></th>
+          <th class="num" id="thIn"></th><th class="num" id="thOut"></th>
+          <th class="num" id="thResp"></th><th class="num" id="thCost"></th>
         </tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
-    <div class="empty" id="tblEmpty">Здесь появятся запросы после проверки ключа.</div>
+    <div class="empty" id="tblEmpty"></div>
     <div class="more hidden" id="tblMore"></div>
   </section>
 
-  <p class="foot">
-    Страница статическая: ключ хранится только в вашем браузере и отправляется напрямую в Agent Router.
-    Баланс берётся из <b>/dashboard/billing</b>, история — из <b>/api/log/token</b>.
-    Суммы считаются по курсу <b id="qpu">500&nbsp;000</b> единиц квоты за $1.
-  </p>
+  <p class="foot" id="foot"></p>
 </div>
+
+<!-- выбор языка: показывается при каждом открытии страницы -->
+<div class="langgate" id="langGate" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+  <div class="langgate__box">
+    <div class="langgate__title" id="gateTitle">Выберите язык · Choose a language</div>
+    <div class="langgate__btns">
+      <button type="button" class="btn langgate__btn" id="gateRu" data-lang="ru">Русский</button>
+      <button type="button" class="btn langgate__btn" id="gateEn" data-lang="en">English</button>
+    </div>
+  </div>
+</div>
+
+<script id="i18n">
+/* Строки интерфейса на двух языках. Тексты инструкций живут отдельно, в блоке guides.
+   {0}, {1} — места для подстановки; T('key', a, b) подставит их по порядку.
+   Множественное число задаётся массивом форм: в русском их три (день/дня/дней),
+   в английском две (day/days). Какую взять — решает _plural своего языка. */
+window.ARI = {
+
+ru: {
+  _locale: 'ru-RU',
+  /* Русское правило: 1 день, 2 дня, 5 дней; 11-14 — всегда последняя форма. */
+  _plural: function (n, f) {
+    var a = Math.abs(Math.round(n)) % 100, b = a % 10;
+    if (a > 10 && a < 20) return f[2];
+    if (b > 1 && b < 5) return f[1];
+    if (b === 1) return f[0];
+    return f[2];
+  },
+  htmlLang: 'ru',
+  title: 'Баланс Agent Router — остаток по API-ключу',
+  metaDesc: 'Проверка остатка API-ключа Agent Router: баланс в долларах, траты по дням и часам, инструкции по подключению к 15 программам.',
+
+  /* выбор языка */
+  langName: 'Русский',
+  switchLang: 'Язык',
+
+  /* шапка */
+  brandTail: 'остаток',
+  brandSub: 'Ключ уходит только на agentrouter.org, сервера у страницы нет',
+  topLink: 'Как подключить ключ →',
+
+  /* форма ключа */
+  keyAria: 'API-ключ Agent Router',
+  reveal: 'показать',
+  hide: 'скрыть',
+  revealAria: 'Показать ключ',
+  hideAria: 'Скрыть ключ',
+  submit: 'Проверить',
+  submitBusy: 'Читаю…',
+  forget: 'Забыть ключ',
+  remember: 'запомнить в браузере',
+
+  /* настройки подключения */
+  optsSummary: 'Настройки подключения',
+  optBase: 'Адрес сервиса',
+  optMirror: 'зеркало',
+  optProxy: 'CORS-прокси (не обязательно)',
+  optProxyHint: 'Нужен, только если браузер блокирует запрос. Прокси увидит ваш ключ — используйте свой.',
+
+  /* баланс */
+  gaugeLabel: 'Остаток на ключе',
+  gaugeIdle: 'вставьте ключ, чтобы увидеть баланс',
+  meterAria: 'Шкала остатка',
+  meterAriaVal: 'Остаток {0}% от выданного объёма',
+  grantLabel: 'Выдано на ключ',
+  exactSummary: 'Брать точную сумму со счёта',
+  exactText: 'По одному <b>api key</b> сервис отдаёт только траты: сколько всего вам начислено, знает лишь сам аккаунт. Чтобы страница читала сумму со счёта, добавьте <b>access token</b> — в консоли Agent Router откройте личные настройки (Personal settings) и нажмите «Сгенерировать системный токен доступа» (Generate system access token).',
+  tokAria: 'Токен доступа к консоли Agent Router',
+  tokApply: 'Применить',
+  tokDrop: 'Убрать',
+  tokHint: 'Токен открывает доступ к аккаунту, поэтому уходит туда же, куда и ключ, — только на agentrouter.org. В браузере сохраняется вместе с ключом, если включена галочка «запомнить».',
+
+  st24: 'Потрачено за 24 ч',
+  st7: 'Потрачено за 7 дней',
+  streq: 'Запросов всего',
+  stfc: 'Хватит примерно на',
+
+  /* инструкции */
+  guidesTitle: 'Как подключить ключ',
+  guidesCount: ['{0} программа', '{0} программы', '{0} программ'],
+  cheat1: '<b>Модели Claude</b> (<code>claude-opus-…</code>) идут по протоколу Anthropic — адрес <code>https://agentrouter.org</code>, <u>без</u> <code>/v1</code>.',
+  cheat2: '<b>Остальные модели</b> (<code>gpt-…</code>, <code>glm-…</code>) — по OpenAI-совместимому протоколу, адрес <code>https://agentrouter.org/v1</code>, <u>с</u> <code>/v1</code>.',
+  cheat3: 'Исключения из этого правила всего два: <b>Kilo Code</b> просит <code>/v1</code> всегда, а <b>Trae</b> — никогда.',
+  guideMine: 'Ваш ключ уже подставлен в поля и команды ниже — их можно копировать как есть.',
+  copy: 'копировать',
+  copied: 'скопировано',
+
+  /* график */
+  chartTitle: 'Траты',
+  granAria: 'Шаг графика',
+  granHour: 'по часам',
+  granDay: 'по дням',
+  rangeAria: 'Период',
+  r24h: '24 ч',
+  r7d: '7 дней',
+  r30d: '30 дней',
+  rall: 'всё',
+  rcustom: 'период',
+  modelAria: 'Модель',
+  allModels: 'Все модели',
+  dateFrom: 'с',
+  dateTo: 'по',
+  pSum: 'За период',
+  pReq: 'Запросов',
+  pAvg: 'Средний запрос',
+  pPeak: 'Пик',
+
+  /* таблица */
+  tblTitle: 'Последние запросы',
+  thTime: 'Время',
+  thModel: 'Модель',
+  thIn: 'Вход',
+  thOut: 'Выход',
+  thResp: 'Ответ',
+  thCost: 'Стоимость',
+  tblEmpty: 'Здесь появятся запросы после проверки ключа.',
+  tblMore: 'Показаны 100 последних из {0}.',
+  emptyModel: 'По выбранной модели запросов нет.',
+  emptyAll: 'Запросов по этому ключу пока нет.',
+  updated: 'обновлено {0}',
+  secShort: 'с',
+
+  /* подвал */
+  foot: 'Страница статическая: ключ хранится только в вашем браузере и отправляется напрямую в Agent Router. Баланс берётся из <b>/dashboard/billing</b>, история — из <b>/api/log/token</b>. Суммы считаются по курсу <b id="qpu">500&nbsp;000</b> единиц квоты за $1.',
+
+  /* сообщения */
+  errNoKey: 'Вставьте ключ — сервис выдаёт его в консоли, строка вида sk-…',
+  warnPrefix: 'Ключ обычно начинается с <b>sk-</b>. Если скопировали не целиком, баланс не найдётся.',
+  errRejected: 'Ключ не принят: {0}. Скопируйте его заново в консоли Agent Router.',
+  errNoNet: 'Браузер не смог связаться с {0}. Проверьте интернет и блокировщики, либо выберите зеркало в настройках подключения.',
+  errNotJson: 'Сервис вернул не JSON — возможно, запрос перехватил прокси или капча.',
+  noteBalance: 'Баланс получить не удалось ({0}) — ниже только история трат.',
+  noteLogs: 'История запросов недоступна ({0}) — график пуст.',
+  noteTokParse: 'Токен доступа приняли, но ответ разобрать не вышло — сумма выдачи посчитана приблизительно.',
+  noteTokBad: 'Токен доступа не принят ({0}) — сумма выдачи посчитана приблизительно. Сгенерируйте его заново в личных настройках консоли.',
+  noteGap: 'История неполная: по запросам набирается <b>{0}</b>, а сервис насчитал <b>{1}</b>. Остаток посчитан по данным сервиса и верен, а вот график и разбивка по дням занижены.',
+
+  /* подписи под цифрами */
+  ofLimit: 'лимит ключа ',
+  ofGrant: 'выдано ',
+  ofSpent: 'потрачено <b>{0}</b>',
+  ofLeft: '<b>{0}%</b> осталось',
+  ofUntil: 'ключ действует до <b>{0}</b>',
+  ofNoBalance: 'это сумма трат по истории — остаток сервис не отдал',
+  firstReq: 'первый — {0}',
+  fcNoWeek: 'за неделю трат не было',
+  fcNeed: 'нужен остаток и история',
+  fcYear: '&gt; года',
+  perDay: '{0} в день',
+  fcUntil: '{0} в день · до {1}',
+  days: ['день', 'дня', 'дней'],
+  reqs: ['запрос', 'запроса', 'запросов'],
+  grantAccount: 'Точная сумма — прочитана с вашего счёта по токену доступа.',
+  grantManual: 'Вписано вручную. Сервис не сообщает по ключу, сколько всего вам выдали.',
+  grantOutgrown: 'Потрачено больше, чем было указано ({0}), — похоже, кредитов начислили ещё. Поставил {1}, поправьте, если знаете точную сумму.',
+  grantGuess: 'Оценка: старт $175. Поправьте поле или добавьте токен доступа ниже.',
+  tzNote: 'Запросы разложены по вашему часовому поясу — {0}. В консоли Agent Router сутки считаются по времени сервера, поэтому границы дней могут не совпадать.',
+  tzLoaded: ' Загружено записей: {0} из {1}.',
+  keyStub: 'sk-ВАШ-КЛЮЧ',
+
+  /* ошибки движка, приходят по-китайски */
+  apiNoToken: 'Ключ не передан',
+  apiBadToken: 'Ключ недействителен',
+  apiExpired: 'Срок действия ключа истёк',
+  apiDisabled: 'Ключ отключён',
+  apiNoFunds: 'Недостаточно средств на ключе',
+  apiBanned: 'Аккаунт заблокирован'
+},
+
+en: {
+  _locale: 'en-US',
+  /* Английский обходится двумя формами: 1 day, 2 days. */
+  _plural: function (n, f) { return Math.abs(Math.round(n)) === 1 ? f[0] : f[1]; },
+  langName: 'English',
+  htmlLang: 'en',
+  title: 'Agent Router balance — what is left on the key',
+  metaDesc: 'Check the balance of an Agent Router API key: dollars left, spending by day and hour, and setup guides for 15 programs.',
+
+  switchLang: 'Language',
+
+  brandTail: 'balance',
+  brandSub: 'The key goes only to agentrouter.org, this page has no server',
+  topLink: 'How to connect the key →',
+
+  keyAria: 'Agent Router API key',
+  reveal: 'show',
+  hide: 'hide',
+  revealAria: 'Show the key',
+  hideAria: 'Hide the key',
+  submit: 'Check',
+  submitBusy: 'Reading…',
+  forget: 'Forget the key',
+  remember: 'remember in this browser',
+
+  optsSummary: 'Connection settings',
+  optBase: 'Service address',
+  optMirror: 'mirror',
+  optProxy: 'CORS proxy (optional)',
+  optProxyHint: 'Needed only if the browser blocks the request. The proxy will see your key, so use one of your own.',
+
+  gaugeLabel: 'Left on the key',
+  gaugeIdle: 'paste a key to see the balance',
+  meterAria: 'Balance scale',
+  meterAriaVal: '{0}% of the granted amount left',
+  grantLabel: 'Granted to the key',
+  exactSummary: 'Read the exact amount from the account',
+  exactText: 'For a single <b>api key</b> the service reports spending only: how much was granted in total is known to the account itself. To let the page read that amount, add an <b>access token</b>: in the Agent Router console open Personal settings and press Generate system access token.',
+  tokAria: 'Agent Router console access token',
+  tokApply: 'Apply',
+  tokDrop: 'Remove',
+  tokHint: 'The token opens access to the account, so it goes where the key goes, to agentrouter.org and nowhere else. It is saved in the browser together with the key if the remember box is ticked.',
+
+  st24: 'Spent in 24 h',
+  st7: 'Spent in 7 days',
+  streq: 'Requests total',
+  stfc: 'Enough for about',
+
+  guidesTitle: 'How to connect the key',
+  guidesCount: ['{0} program', '{0} programs'],
+  cheat1: '<b>Claude models</b> (<code>claude-opus-…</code>) use the Anthropic protocol: address <code>https://agentrouter.org</code>, <u>without</u> <code>/v1</code>.',
+  cheat2: '<b>Other models</b> (<code>gpt-…</code>, <code>glm-…</code>) use the OpenAI compatible protocol: address <code>https://agentrouter.org/v1</code>, <u>with</u> <code>/v1</code>.',
+  cheat3: 'There are only two exceptions: <b>Kilo Code</b> always wants <code>/v1</code>, and <b>Trae</b> never does.',
+  guideMine: 'Your key is already filled into the fields and commands below, so you can copy them as they are.',
+  copy: 'copy',
+  copied: 'copied',
+
+  chartTitle: 'Spending',
+  granAria: 'Chart step',
+  granHour: 'by hour',
+  granDay: 'by day',
+  rangeAria: 'Period',
+  r24h: '24 h',
+  r7d: '7 days',
+  r30d: '30 days',
+  rall: 'all',
+  rcustom: 'custom',
+  modelAria: 'Model',
+  allModels: 'All models',
+  dateFrom: 'from',
+  dateTo: 'to',
+  pSum: 'In the period',
+  pReq: 'Requests',
+  pAvg: 'Average request',
+  pPeak: 'Peak',
+
+  tblTitle: 'Latest requests',
+  thTime: 'Time',
+  thModel: 'Model',
+  thIn: 'In',
+  thOut: 'Out',
+  thResp: 'Reply',
+  thCost: 'Cost',
+  tblEmpty: 'Requests will show up here once the key is checked.',
+  tblMore: 'Showing the latest 100 of {0}.',
+  emptyModel: 'No requests for the selected model.',
+  emptyAll: 'No requests on this key yet.',
+  updated: 'updated {0}',
+  secShort: 's',
+
+  foot: 'The page is static: the key is kept in your browser only and goes straight to Agent Router. The balance comes from <b>/dashboard/billing</b>, the history from <b>/api/log/token</b>. Amounts are counted at <b id="qpu">500&nbsp;000</b> quota units per $1.',
+
+  errNoKey: 'Paste a key. The service issues it in the console, a line that looks like sk-…',
+  warnPrefix: 'A key usually starts with <b>sk-</b>. If it was copied only in part, the balance will not be found.',
+  errRejected: 'The key was not accepted: {0}. Copy it again in the Agent Router console.',
+  errNoNet: 'The browser could not reach {0}. Check the internet and any blockers, or pick the mirror in the connection settings.',
+  errNotJson: 'The service returned something that is not JSON. A proxy or a captcha may have intercepted the request.',
+  noteBalance: 'The balance could not be fetched ({0}), so only the spending history is below.',
+  noteLogs: 'The request history is unavailable ({0}), so the chart is empty.',
+  noteTokParse: 'The access token was accepted, but its answer could not be parsed, so the granted amount is an estimate.',
+  noteTokBad: 'The access token was not accepted ({0}), so the granted amount is an estimate. Generate a new one in the personal settings of the console.',
+  noteGap: 'The history is incomplete: the requests add up to <b>{0}</b>, while the service counted <b>{1}</b>. The balance is taken from the service data and is correct, but the chart and the per-day split are understated.',
+
+  ofLimit: 'key limit ',
+  ofGrant: 'granted ',
+  ofSpent: 'spent <b>{0}</b>',
+  ofLeft: '<b>{0}%</b> left',
+  ofUntil: 'the key works until <b>{0}</b>',
+  ofNoBalance: 'this is the spending from the history, the service did not report a balance',
+  firstReq: 'first one: {0}',
+  fcNoWeek: 'nothing was spent this week',
+  fcNeed: 'a balance and a history are needed',
+  fcYear: '&gt; a year',
+  perDay: '{0} a day',
+  fcUntil: '{0} a day · until {1}',
+  days: ['day', 'days'],
+  reqs: ['request', 'requests'],
+  grantAccount: 'The exact amount, read from your account with the access token.',
+  grantManual: 'Filled in by hand. For a single key the service does not report how much was granted in total.',
+  grantOutgrown: 'More was spent than the amount given ({0}), so more credits were probably added. I set {1}, correct it if you know the exact number.',
+  grantGuess: 'An estimate starting at $175. Correct the field or add an access token below.',
+  tzNote: 'Requests are laid out in your time zone, {0}. In the Agent Router console a day is counted by server time, so the day boundaries may differ.',
+  tzLoaded: ' Records loaded: {0} of {1}.',
+  keyStub: 'sk-YOUR-KEY',
+
+  apiNoToken: 'The key was not sent',
+  apiBadToken: 'The key is invalid',
+  apiExpired: 'The key has expired',
+  apiDisabled: 'The key is switched off',
+  apiNoFunds: 'Not enough funds on the key',
+  apiBanned: 'The account is blocked'
+}
+
+};
+</script>
 
 <script id="core">
 /* Чистые функции: считают деньги и раскладывают логи по корзинам. Тестируются отдельно. */
@@ -573,18 +893,22 @@ code{
     return { total: isFinite(t) && t >= 0 ? t : null };
   };
 
-  /* Сообщения движка new-api приходят по-китайски — переводим известные. */
+  /* Сообщения движка new-api приходят по-китайски. Здесь только опознаём их и отдаём
+     ключ словаря — сам текст лежит в блоке i18n, потому что зависит от языка страницы.
+     Незнакомую ошибку показываем как есть: лучше китайский оригинал, чем «что-то пошло не так». */
   var DICT = [
-    [/未提供令牌/, 'Ключ не передан'],
-    [/无效的令牌|令牌验证失败/, 'Ключ недействителен'],
-    [/令牌已过期/, 'Срок действия ключа истёк'],
-    [/该令牌状态不可用|令牌已被禁用/, 'Ключ отключён'],
-    [/额度不足|余额不足/, 'Недостаточно средств на ключе'],
-    [/用户已被封禁|用户状态不可用/, 'Аккаунт заблокирован']
+    [/未提供令牌/, 'apiNoToken'],
+    [/无效的令牌|令牌验证失败/, 'apiBadToken'],
+    [/令牌已过期/, 'apiExpired'],
+    [/该令牌状态不可用|令牌已被禁用/, 'apiDisabled'],
+    [/额度不足|余额不足/, 'apiNoFunds'],
+    [/用户已被封禁|用户状态不可用/, 'apiBanned']
   ];
-  C.cleanMessage = function (msg) {
+  C.cleanMessage = function (msg, tr) {
     var s = String(msg || '').replace(/\s*\(request id:[^)]*\)/i, '').trim();
-    for (var i = 0; i < DICT.length; i++) if (DICT[i][0].test(s)) return DICT[i][1];
+    for (var i = 0; i < DICT.length; i++) {
+      if (DICT[i][0].test(s)) return tr ? tr(DICT[i][1]) : DICT[i][1];
+    }
     return s;
   };
 
@@ -731,15 +1055,9 @@ code{
     if (Math.abs(n) < 1) return C.usd(n, 4).replace(/(\.\d{2,}?)0+$/, '$1');
     return C.usd(n, 2);
   };
-  C.num = function (v) { return (Number(v) || 0).toLocaleString('ru-RU'); };
-
-  C.plural = function (n, one, few, many) {
-    var a = Math.abs(Math.round(n)) % 100, b = a % 10;
-    if (a > 10 && a < 20) return many;
-    if (b > 1 && b < 5) return few;
-    if (b === 1) return one;
-    return many;
-  };
+  /* Разделители тысяч зависят от языка: 1 234 по-русски, 1,234 по-английски.
+     Локаль передаёт вызывающий код, по умолчанию русская — блок core умеет работать сам по себе. */
+  C.num = function (v, locale) { return (Number(v) || 0).toLocaleString(locale || 'ru-RU'); };
 
   root.ARB = C;
 })(typeof window !== 'undefined' ? window : globalThis);
@@ -755,6 +1073,8 @@ code{
    где искать экран. Если первоисточник показывает место только картинкой, честно
    говорим об этом в notes, а не выдумываем путь. */
 window.ARG = {
+
+ru: {
   groups: [
   {
     title: 'Расширения для VS Code',
@@ -1371,6 +1691,627 @@ window.ARG = {
 
   ]}
   ]
+},
+
+en: {
+  groups: [
+  {
+    title: 'VS Code extensions',
+    tools: [
+
+    { id:'cline', name:'Cline', note:'VS Code extension',
+      ways:[
+        {proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open VS Code and press `Ctrl+Shift+X` (on Mac `Cmd+Shift+X`): the **Extensions** panel opens on the left.',
+        'Type `Cline` into the search box and press **Install** on the extension with that name. Once it is installed, a Cline icon appears in the icon bar on the left, click it.',
+        'In the Cline panel click the gear icon in the top right corner. The settings open, and the section you need is called **API Configuration**.',
+        'From here there are two routes, pick one. For Claude models, in the **API Provider** field select **Anthropic**.',
+        'Tick the **Use custom base URL** checkbox: a field for the address appears underneath it.',
+        'In **Custom Base URL** type `https://agentrouter.org`. There must be no `/v1` here.',
+        'In **API Key** paste `{{KEY}}`.',
+        'In the **Model** list pick `claude-opus-5`; `claude-opus-4-8` is available as well.',
+        'The second route is for `gpt-5.5` and `glm-5.2`. In **API Provider** select **OpenAI Compatible**, in **Base URL** type `https://agentrouter.org/v1`, in **API Key** paste `{{KEY}}`, and type the **Model ID** by hand: there is no ready-made list there.',
+        'Check the connection: write "reply with OK only" in the Cline chat. If OK comes back, everything works.',
+        'Check file access: "look at the files in this folder and tell me whether there is a README, do not change anything".'
+      ],
+      code:[],
+      notes:['The two ways are independent: either Anthropic without `/v1`, or OpenAI Compatible with `/v1`. Do not mix the address of one with the protocol of the other.',
+             'Cline has renamed its settings sections between versions. If there is no **API Configuration** section, look for the very first block in the settings, the one with the **API Provider** and **API Key** fields.']
+    },
+
+    { id:'roocode', name:'Roo Code', note:'VS Code extension',
+      ways:[
+        {proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open VS Code and press `Ctrl+Shift+X` (on Mac `Cmd+Shift+X`): the **Extensions** panel opens.',
+        'Type `Roo Code` into the search box and press **Install**.',
+        'Click the Roo Code icon in the icon bar on the left, then the gear icon in the top right corner of the panel: the settings open.',
+        'Go to the settings section with the provider fields: in recent versions it is called **Providers**, in older ones **API Configuration**.',
+        'At the top there is a **Configuration Profile** list. You can keep the current profile, or click the plus next to it and start a separate one, so your old settings are not lost.',
+        'For Claude models, in the **API Provider** field select **Anthropic**.',
+        'Tick the **Use custom base URL** checkbox and type `https://agentrouter.org` into the field that appears, without `/v1`.',
+        'In **API Key** paste `{{KEY}}`.',
+        'Choose `claude-opus-5` as the model, or `claude-opus-4-8` if it is not in the list.',
+        'For `gpt-5.5` and `glm-5.2` take **API Provider** → **OpenAI Compatible**, **Base URL** → `https://agentrouter.org/v1`, and type the **Model ID** by hand.',
+        'Press **Save** (in some versions the button is called **Done**) and write in the chat: "reply with OK only".'
+      ],
+      code:[],
+      notes:['Roo Code pulls the model list in on its own and refreshes it with a delay, so the newest models do not show up there right away.']
+    },
+
+    { id:'kilocode', name:'Kilo Code', note:'VS Code extension',
+      ways:[
+        {proto:'Anthropic Messages', base:'https://agentrouter.org/v1', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open VS Code and press `Ctrl+Shift+X` (on Mac `Cmd+Shift+X`).',
+        'Type `Kilo Code` into the search box and press **Install**.',
+        'Click the Kilo Code icon in the icon bar on the left, then the gear icon in the top right corner of the panel: the settings open.',
+        'Go to the **Providers** screen and click **Custom Provider**: that is how you add a connection of your own instead of a ready-made one.',
+        'In **Provider ID** type `agentrouter`.',
+        'In **Display Name** type any name that makes sense to you, for example `Agent Router`. It is only used for the list.',
+        'In **Provider API** select **Anthropic Messages** for Claude models, or **OpenAI Compatible** for `gpt-5.5` and `glm-5.2`.',
+        'In **Base URL** type `https://agentrouter.org/v1`. This is the only program in the list where `/v1` is needed for Anthropic too, so do not skip it.',
+        'In **API Key** paste `{{KEY}}`.',
+        'In **Model** enter `claude-opus-5` or `claude-opus-4-8`, or else `gpt-5.5` / `glm-5.2`.',
+        'Press **Submit**: the connection is saved and shows up in the provider list.',
+        'Write in the chat: "reply with OK only".'
+      ],
+      code:[],
+      notes:['The one exception to the general rule: Kilo Code expects `/v1` even for Anthropic Messages.']
+    },
+
+    { id:'claude-code-vscode', name:'Claude Code', note:'VS Code extension',
+      ways:[{proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'}],
+      steps:[
+        'Open VS Code and press `Ctrl+Shift+X` (on Mac `Cmd+Shift+X`), type `Claude Code` into the search box and press **Install**.',
+        'Check whether the program itself is installed. Open the built-in terminal from the **Terminal** → **New Terminal** menu and run `claude --version`.',
+        'If no version is printed, install the program with the command from the "Installing the program" block below and run `claude --version` again.',
+        'Press `Ctrl+Shift+P` (on Mac `Cmd+Shift+P`): the command palette opens at the top.',
+        'Type `Open User Settings (JSON)` into it and pick the **Preferences: Open User Settings (JSON)** item.',
+        'The `settings.json` file opens. Paste the contents of the `settings.json` block below into it. If the file already has something in it, add only the lines from inside the outer curly braces, and do not forget the comma between blocks.',
+        'Save the file: `Ctrl+S` (on Mac `Cmd+S`).',
+        'Get rid of the Anthropic login window. Go back to **Extensions** (`Ctrl+Shift+X`) and click the **Claude Code** extension: its page opens, and there you click the gear icon → **Settings** and tick the **Disable Login Prompt** checkbox.',
+        'Reload the editor window: `Ctrl+Shift+P` (on Mac `Cmd+Shift+P`) → **Developer: Reload Window**. Without a reload the variables are not picked up.',
+        'Open the Claude Code panel and write: "reply with OK only".'
+      ],
+      code:[
+        {title:'Installing the program', lang:'bash', text:
+'# macOS, Linux, WSL\n' +
+'curl -fsSL https://claude.ai/install.sh | bash\n' +
+'\n' +
+'# Windows PowerShell\n' +
+'irm https://claude.ai/install.ps1 | iex'},
+        {title:'settings.json', lang:'json', text:
+'{\n' +
+'  "claudeCode.environmentVariables": [\n' +
+'    { "name": "ANTHROPIC_AUTH_TOKEN", "value": "{{KEY}}" },\n' +
+'    { "name": "ANTHROPIC_BASE_URL", "value": "https://agentrouter.org" },\n' +
+'    { "name": "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY", "value": "1" },\n' +
+'    { "name": "ANTHROPIC_MODEL", "value": "claude-opus-5" }\n' +
+'  ],\n' +
+'  "claudeCode.disableLoginPrompt": true,\n' +
+'  "claudeCode.initialPermissionMode": "acceptEdits"\n' +
+'}'}
+      ],
+      notes:['`ANTHROPIC_BASE_URL` is written without `/v1`: the extension talks over the Anthropic protocol.',
+             'The **Disable Login Prompt** checkbox and the `"claudeCode.disableLoginPrompt": true` line in the file are one and the same. Either one is enough, and having both does no harm.',
+             'The model is switched on the `ANTHROPIC_MODEL` line: `claude-opus-5` or `claude-opus-4-8`.',
+             'If you have been working in this same VS Code on a Claude Pro or Max subscription, these variables override it and requests will go through Agent Router.']
+    },
+
+    { id:'github-copilot', name:'GitHub Copilot', note:'VS Code extension',
+      ways:[
+        {proto:'Messages', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'Chat Completions', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Copilot is usually built into VS Code already. If it is missing, press `Ctrl+Shift+X` (on Mac `Cmd+Shift+X`), search for `GitHub Copilot` and press **Install**.',
+        'Sign in to your GitHub account: the profile icon in the bottom left corner of VS Code → the item about signing in to **GitHub**. Until you are signed in, the item for adding a model does not appear in the interface at all.',
+        'Open the Copilot chat: `Ctrl+Alt+I` (on Mac `Cmd+Ctrl+I`) or the chat icon at the top of the window.',
+        'At the bottom of the chat window, next to the input box, there is a model picker list. Click it and choose **Manage Models**.',
+        'In the list of providers that opens, choose **Add Model**, then **Custom endpoint**: that is the option for connecting an address of your own.',
+        'In the group name field type `AgentRouter`, and in the key field paste `{{KEY}}`.',
+        'Pick the request format: **Messages** for Claude models, **Chat Completions** for `gpt-5.5` and `glm-5.2`.',
+        'The model editor opens. Fill in the **Model ID**: `claude-opus-5`, `claude-opus-4-8`, `gpt-5.5` or `glm-5.2`.',
+        'For the display name type anything you like: it is only for you, so you can tell the model apart in the list.',
+        'The address depends on the format: for **Messages** it is `https://agentrouter.org`, for **Chat Completions** it is `https://agentrouter.org/v1`. Save it.',
+        'Pick the new model in that same list at the bottom of the chat and write: "reply with OK only".'
+      ],
+      code:[],
+      notes:['The format and the address come as a pair: Messages without `/v1`, Chat Completions with `/v1`.',
+             'In the service documentation these menu items are given in Chinese and the place is shown with screenshots. In the English interface they are called **Manage Models**, **Add Model** and **Custom endpoint**; in recent builds the wording drifts a little, so look for the item about your own (custom) address.']
+    }
+
+  ]},
+  {
+    title: 'Command line',
+    tools: [
+
+    { id:'claude-code', name:'Claude Code', note:'CLI',
+      ways:[{proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'}],
+      steps:[
+        'Open a terminal. On Windows: **Start** → type `PowerShell` → **Windows PowerShell**. On Mac: **Launchpad** → **Terminal**.',
+        'Check Node.js with the `node --version` command. You need version 18 or newer. If the command is not found, install Node.js first from nodejs.org.',
+        'Install the program: `npm install -g @anthropic-ai/claude-code@latest`. The install takes a minute or two.',
+        'Make sure the command is there: `claude --version` should print a version number.',
+        'Set three environment variables: the key, the service address, and the model. Take the block for your system below and paste it into the same terminal window.',
+        'Go to your project folder: `cd` and the path to the folder. For example `cd ~/Desktop/my-project`, or on Windows `cd $HOME\\Desktop\\my-project`.',
+        'Run `claude`.',
+        'If the first launch asks whether to use the key from the environment variables, say yes.',
+        'Type "reply with OK only".',
+        'Check file access: "list the files in this folder and tell me whether there is a README, do not change anything".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'node --version\n' +
+'npm install -g @anthropic-ai/claude-code@latest\n' +
+'claude --version'},
+        {title:'Variables · macOS, Linux, WSL', lang:'bash', text:
+'export ANTHROPIC_AUTH_TOKEN="{{KEY}}"\n' +
+'export ANTHROPIC_BASE_URL="https://agentrouter.org"\n' +
+'export ANTHROPIC_MODEL="claude-opus-5"\n' +
+'\n' +
+'claude'},
+        {title:'Variables · Windows PowerShell', lang:'powershell', text:
+'$env:ANTHROPIC_AUTH_TOKEN="{{KEY}}"\n' +
+'$env:ANTHROPIC_BASE_URL="https://agentrouter.org"\n' +
+'$env:ANTHROPIC_MODEL="claude-opus-5"\n' +
+'\n' +
+'claude'},
+        {title:'Restore a Claude Pro or Max subscription', lang:'bash', text:
+'unset ANTHROPIC_AUTH_TOKEN\n' +
+'unset ANTHROPIC_BASE_URL\n' +
+'unset ANTHROPIC_MODEL'}
+      ],
+      notes:['`ANTHROPIC_BASE_URL` goes without `/v1`: the address with `/v1` is only needed by OpenAI-compatible clients.',
+             'The variables live only in this terminal window. Close the window and you have to set them again. To make them permanent, add the `export …` lines to the end of `~/.zshrc` or `~/.bashrc`, and on Windows: **Start** → "Edit the system environment variables" → the **Environment Variables** button → **New**.',
+             'While these variables are set, they override the login to a Claude Pro, Max, or Team subscription: requests go through Agent Router. To get the subscription back, clear the variables with the commands above and start `claude` again.']
+    },
+
+    { id:'codex', name:'Codex', note:'CLI from OpenAI',
+      ways:[{proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.6 · gpt-5.5 · glm-5.2'}],
+      steps:[
+        'Open a terminal. On Windows: **Start** → type `PowerShell` → **Windows PowerShell**. On Mac: **Launchpad** → **Terminal**.',
+        'Check Node.js: `node --version`. You need version 18 or newer.',
+        'Install Codex: `pnpm install -g @openai/codex`. If pnpm is not installed, `npm install -g @openai/codex` works too.',
+        'Check it: `codex --version`.',
+        'Create the settings file. On Mac and Linux it is `~/.codex/config.toml`, on Windows `C:\\Users\\<your name>\\.codex\\config.toml`. You usually have to create the `.codex` folder yourself: the commands in the "Create the settings file" block below make both the folder and the file.',
+        'Paste the contents of the `config.toml` block below into the file that opens and save it. In the `nano` editor that is `Ctrl+O`, `Enter`, `Ctrl+X`.',
+        'If you edit the file in Notepad, watch out that it does not get saved as `config.toml.txt`: in the save dialog pick the "All Files" type.',
+        'Go to your project folder: `cd my-project`.',
+        'Run `codex` and type "reply with OK only".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'node --version\n' +
+'pnpm install -g @openai/codex\n' +
+'codex --version'},
+        {title:'Create the settings file', lang:'bash', text:
+'# macOS, Linux, WSL\n' +
+'mkdir -p ~/.codex\n' +
+'nano ~/.codex/config.toml\n' +
+'\n' +
+'# Windows PowerShell\n' +
+'mkdir "$HOME\\.codex" -Force\n' +
+'notepad "$HOME\\.codex\\config.toml"'},
+        {title:'The ~/.codex/config.toml file', lang:'toml', text:
+'model = "gpt-5.5"\n' +
+'model_provider = "agentrouter"\n' +
+'\n' +
+'[model_providers.agentrouter]\n' +
+'name = "AgentRouter"\n' +
+'base_url = "https://agentrouter.org/v1"\n' +
+'wire_api = "responses"\n' +
+'experimental_bearer_token = "{{KEY}}"'},
+        {title:'Run it', lang:'bash', text:
+'cd my-project\n' +
+'codex'}
+      ],
+      notes:['Here the key does not live in an environment variable, it sits right in the config, in the `experimental_bearer_token` field.',
+             'You switch to another model with the `model` line at the top of the file: `gpt-5.6`, `gpt-5.5`, or `glm-5.2`.']
+    },
+
+    { id:'qwencode', name:'Qwen Code', note:'CLI',
+      ways:[
+        {proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open a terminal. On Windows: **Start** → type `PowerShell` → **Windows PowerShell**. On Mac: **Launchpad** → **Terminal**.',
+        'Check Node.js: `node --version`. You need version 18 or newer.',
+        'Install the program: `npm install -g @qwen-code/qwen-code@latest`.',
+        'Check it: `qwen --version`.',
+        'Pick **one** set of variables: `ANTHROPIC_*` for Claude models, or `OPENAI_*` for `gpt-5.5` and `glm-5.2`. You cannot set both at once.',
+        'Copy the block you need from below into the same terminal window.',
+        'Go to your project folder with the `cd` command and the path to the folder.',
+        'Run `qwen` and type "reply with OK only".',
+        'Check file access: "list the files in this folder and tell me whether there is a README".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'node --version\n' +
+'npm install -g @qwen-code/qwen-code@latest\n' +
+'qwen --version'},
+        {title:'Anthropic option · macOS, Linux, WSL', lang:'bash', text:
+'export ANTHROPIC_AUTH_TOKEN="{{KEY}}"\n' +
+'export ANTHROPIC_BASE_URL="https://agentrouter.org"\n' +
+'export ANTHROPIC_MODEL="claude-opus-5"\n' +
+'\n' +
+'qwen'},
+        {title:'OpenAI option · macOS, Linux, WSL', lang:'bash', text:
+'export OPENAI_API_KEY="{{KEY}}"\n' +
+'export OPENAI_BASE_URL="https://agentrouter.org/v1"\n' +
+'export OPENAI_MODEL="gpt-5.5"\n' +
+'\n' +
+'qwen'},
+        {title:'The same thing · Windows PowerShell', lang:'powershell', text:
+'# Anthropic option\n' +
+'$env:ANTHROPIC_AUTH_TOKEN="{{KEY}}"\n' +
+'$env:ANTHROPIC_BASE_URL="https://agentrouter.org"\n' +
+'$env:ANTHROPIC_MODEL="claude-opus-5"\n' +
+'\n' +
+'# OpenAI option\n' +
+'$env:OPENAI_API_KEY="{{KEY}}"\n' +
+'$env:OPENAI_BASE_URL="https://agentrouter.org/v1"\n' +
+'$env:OPENAI_MODEL="gpt-5.5"'}
+      ],
+      notes:['The sets do not mix: either `ANTHROPIC_*` without `/v1`, or `OPENAI_*` with `/v1`. If both are set, the client picks one and the other gets in the way.',
+             'The variables work only in the current terminal window: once you close it, set them again.']
+    },
+
+    { id:'opencode', name:'OpenCode', note:'CLI',
+      ways:[
+        {proto:'Anthropic', base:'https://agentrouter.org', models:'claude-opus-5'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open a terminal. On Windows: **Start** → type `PowerShell` → **Windows PowerShell**. On Mac: **Launchpad** → **Terminal**.',
+        'Go to your project folder right away: `cd ~/Desktop/my-project`, or on Windows `cd $HOME\\Desktop\\my-project`. OpenCode settings are tied to the folder, so do not skip this step.',
+        'Install OpenCode: with a script on macOS and Linux, or through npm on any system. The commands are in the "Install" block below.',
+        'Check it: `opencode --version`.',
+        'In that same folder create an `opencode.json` file and paste **one** of the two blocks below into it: the one for Claude models or the one for `gpt-5.5`.',
+        'Save the key with a separate command: `opencode providers login --provider agentrouter`.',
+        'The program will ask for the key: paste `{{KEY}}` and press `Enter`. The key is not in the `opencode.json` file and must not be there.',
+        'Run `opencode` and type "reply with OK only".',
+        'Check file access: "list the files in this folder and tell me whether there is a README".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'# macOS, Linux, WSL\n' +
+'curl -fsSL https://opencode.ai/install | bash\n' +
+'\n' +
+'# any system, through npm\n' +
+'npm install -g opencode-ai\n' +
+'\n' +
+'opencode --version'},
+        {title:'opencode.json · Anthropic option', lang:'json', text:
+'{\n' +
+'  "$schema": "https://opencode.ai/config.json",\n' +
+'  "provider": {\n' +
+'    "agentrouter": {\n' +
+'      "npm": "@ai-sdk/anthropic",\n' +
+'      "name": "AgentRouter (Anthropic)",\n' +
+'      "options": {\n' +
+'        "baseURL": "https://agentrouter.org"\n' +
+'      },\n' +
+'      "models": {\n' +
+'        "claude-opus-5": { "name": "claude-opus-5" }\n' +
+'      }\n' +
+'    }\n' +
+'  },\n' +
+'  "model": "agentrouter/claude-opus-5"\n' +
+'}'},
+        {title:'opencode.json · OpenAI option', lang:'json', text:
+'{\n' +
+'  "$schema": "https://opencode.ai/config.json",\n' +
+'  "provider": {\n' +
+'    "agentrouter": {\n' +
+'      "npm": "@ai-sdk/openai-compatible",\n' +
+'      "name": "AgentRouter (OpenAI Compatible)",\n' +
+'      "options": {\n' +
+'        "baseURL": "https://agentrouter.org/v1"\n' +
+'      },\n' +
+'      "models": {\n' +
+'        "gpt-5.5": { "name": "gpt-5.5" }\n' +
+'      }\n' +
+'    }\n' +
+'  },\n' +
+'  "model": "agentrouter/gpt-5.5"\n' +
+'}'},
+        {title:'Key and launch', lang:'bash', text:
+'opencode providers login --provider agentrouter\n' +
+'# paste the key at the prompt: {{KEY}}\n' +
+'\n' +
+'opencode'}
+      ],
+      notes:['The key is never written into the config: the `opencode providers login` command asks for it and stores it separately.',
+             'The `opencode.json` file applies in the directory it sits in, so every project has its own setup. The default model is set by the `model` line in `provider/model` format.']
+    },
+
+    { id:'openclaw', name:'OpenClaw', note:'CLI',
+      ways:[
+        {proto:'anthropic-messages', base:'https://agentrouter.org', models:'claude-opus-5'},
+        {proto:'openai-completions', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open a terminal and install OpenClaw: with a script on macOS and Linux, or through npm. The commands are in the "Install" block below.',
+        'Start the setup wizard: `openclaw onboard`. The very first time you run `openclaw`, it opens on its own.',
+        'Nine questions follow. Pick an answer with the up and down arrow keys and confirm with `Enter`. Answer exactly like this:',
+        'For **I understand this is powerful and inherently risky. Continue?** choose **Yes**.',
+        'For **Onboarding mode** choose **QuickStart**.',
+        'For **Model/auth provider** choose **Skip for now**: we will add the provider ourselves, with a file.',
+        'For **Filter models by provider** choose **All providers**.',
+        'For **Default model** choose **Keep current**.',
+        'For **Select channel** choose **Skip for now**.',
+        'For **Configure skills now?** choose **No**.',
+        'For **Enable hooks?** choose **Skip for now**.',
+        'For **How do you want to hatch your bot?** any option will do, it does not affect connecting the key.',
+        'Open the models settings file and paste the whole block below into it: it holds two providers at once, one for Claude and one for `gpt-5.5`.',
+        'Replace the `apiKey` value in both places with your own key if it was not filled in automatically. By default the service leaves an `sk-` stub there.',
+        'Run `openclaw`, open the chat section, and type "reply with OK only".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'# macOS, Linux, WSL\n' +
+'curl -fsSL https://openclaw.ai/install.sh | bash\n' +
+'\n' +
+'# or through npm\n' +
+'npm install -g openclaw\n' +
+'\n' +
+'openclaw onboard'},
+        {title:'Models config', lang:'json', text:
+'{\n' +
+'  "models": {\n' +
+'    "mode": "merge",\n' +
+'    "providers": {\n' +
+'      "agentrouter-messages": {\n' +
+'        "baseUrl": "https://agentrouter.org",\n' +
+'        "apiKey": "{{KEY}}",\n' +
+'        "auth": "token",\n' +
+'        "api": "anthropic-messages",\n' +
+'        "models": [\n' +
+'          {\n' +
+'            "id": "claude-opus-5",\n' +
+'            "name": "claude-opus-5",\n' +
+'            "input": ["text", "image"],\n' +
+'            "contextWindow": 200000,\n' +
+'            "maxTokens": 16384\n' +
+'          }\n' +
+'        ]\n' +
+'      },\n' +
+'      "agentrouter-completions": {\n' +
+'        "baseUrl": "https://agentrouter.org/v1",\n' +
+'        "apiKey": "{{KEY}}",\n' +
+'        "auth": "token",\n' +
+'        "api": "openai-completions",\n' +
+'        "models": [\n' +
+'          {\n' +
+'            "id": "gpt-5.5",\n' +
+'            "name": "gpt-5.5",\n' +
+'            "input": ["text"],\n' +
+'            "contextWindow": 100000,\n' +
+'            "maxTokens": 8192\n' +
+'          }\n' +
+'        ]\n' +
+'      }\n' +
+'    }\n' +
+'  },\n' +
+'  "agents": {\n' +
+'    "defaults": {\n' +
+'      "model": {\n' +
+'        "primary": "agentrouter-completions/gpt-5.5"\n' +
+'      }\n' +
+'    }\n' +
+'  }\n' +
+'}'}
+      ],
+      notes:['The key is needed in both `apiKey` fields: by default an `sk-` stub sits there.',
+             'The default model is set by the `primary` line in `provider/model` format; for Claude that is `agentrouter-messages/claude-opus-5`.',
+             'The service documentation does not say where exactly the models settings file lives, so let the program tell you the path: check `openclaw --help` or the settings section in its interface.']
+    },
+
+    { id:'hermes', name:'Hermes Agent', note:'CLI from Nous Research',
+      ways:[
+        {proto:'anthropic-messages', base:'https://agentrouter.org', models:'claude-opus-5'},
+        {proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open a terminal: on macOS and Linux that is **Terminal**, on Windows **Start** → `PowerShell` → **Windows PowerShell**.',
+        'Install Hermes with the command for your system, see the "Install" blocks below. On macOS and Linux `pipx` works too if you already have it.',
+        'Check it: `hermes --version`.',
+        'Put the key into the `AGENTROUTER_API_KEY` environment variable. The extension file holds no key of its own, it only points at this variable.',
+        'Start the wizard: `hermes setup model`, and add the AgentRouter provider in it.',
+        'The service documentation does not spell out the steps of this wizard, so follow the prompts on screen: the address is `https://agentrouter.org` for Claude or `https://agentrouter.org/v1` for the other models, and the key is `{{KEY}}`.',
+        'Create your own provider extension file and paste **one** of the two blocks below into it.',
+        'Run `hermes chat` and type "reply with OK only".',
+        'Check file access: "list the files in this folder and tell me whether there is a README".'
+      ],
+      code:[
+        {title:'Install · macOS, Linux, WSL', lang:'bash', text:
+'curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash\n' +
+'\n' +
+'# or through pipx\n' +
+'pipx install hermes-agent\n' +
+'\n' +
+'hermes --version'},
+        {title:'Install · Windows PowerShell', lang:'powershell', text:
+'iex (irm https://hermes-agent.nousresearch.com/install.ps1)\n' +
+'\n' +
+'$env:AGENTROUTER_API_KEY="{{KEY}}"'},
+        {title:'Key and setup wizard', lang:'bash', text:
+'export AGENTROUTER_API_KEY="{{KEY}}"\n' +
+'hermes setup model'},
+        {title:'Provider extension · Anthropic option', lang:'typescript', text:
+'export default function (pi: ExtensionAPI) {\n' +
+'  pi.registerProvider("agentrouter-claude", {\n' +
+'    name: "AgentRouter Claude",\n' +
+'    baseUrl: "https://agentrouter.org",\n' +
+'    apiKey: process.env.AGENTROUTER_API_KEY,\n' +
+'    api: "anthropic-messages",\n' +
+'    models: [\n' +
+'      {\n' +
+'        id: "claude-opus-5",\n' +
+'        name: "claude-opus-5",\n' +
+'        input: ["text"],\n' +
+'        contextWindow: 1000000,\n' +
+'        maxTokens: 8192\n' +
+'      }\n' +
+'    ]\n' +
+'  });\n' +
+'}'},
+        {title:'Provider extension · OpenAI option', lang:'typescript', text:
+'export default function (pi: ExtensionAPI) {\n' +
+'  pi.registerProvider("agentrouter-openai", {\n' +
+'    name: "AgentRouter openai",\n' +
+'    baseUrl: "https://agentrouter.org/v1",\n' +
+'    apiKey: process.env.AGENTROUTER_API_KEY,\n' +
+'    api: "OpenAI Compatible",\n' +
+'    models: [\n' +
+'      {\n' +
+'        id: "gpt-5.5",\n' +
+'        name: "gpt-5.5",\n' +
+'        input: ["text"],\n' +
+'        contextWindow: 1000000,\n' +
+'        maxTokens: 8192\n' +
+'      }\n' +
+'    ]\n' +
+'  });\n' +
+'}'}
+      ],
+      notes:['The key is read from the `AGENTROUTER_API_KEY` variable, so the extension file is safe to keep in a repository.',
+             'The service documentation does not say where to put the extension file: check `hermes --help` or the extensions section in the Hermes documentation itself.']
+    },
+
+    { id:'pi', name:'Pi', note:'CLI',
+      ways:[
+        {proto:'anthropic-messages', base:'https://agentrouter.org', models:'claude-opus-5'},
+        {proto:'openai-completions', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Open a terminal. On Windows, first enter WSL: **Start** → type `wsl` → `Enter`; after that every command is the same as on Linux.',
+        'Install Pi: `curl -fsSL https://pi.dev/install.sh | sh`.',
+        'Check it: `pi --version`.',
+        'Create the settings folder: `mkdir -p ~/.pi/agent`.',
+        'Open the settings file: `nano ~/.pi/agent/models.json`.',
+        'Paste **one** of the two blocks below, either for the Claude models or for `gpt-5.5`.',
+        'Save the file and close the editor: `Ctrl+O`, `Enter`, then `Ctrl+X`.',
+        'Set the variable with the key: `export AGENTROUTER_API_KEY="{{KEY}}"`. The config points at `$AGENTROUTER_API_KEY`, so without the variable there is no key.',
+        'Run `pi` and pick `agentrouter/claude-opus-5` or `agentrouter/gpt-5.5` from the model list.',
+        'Type "reply with OK only".'
+      ],
+      code:[
+        {title:'Install', lang:'bash', text:
+'curl -fsSL https://pi.dev/install.sh | sh\n' +
+'pi --version\n' +
+'\n' +
+'mkdir -p ~/.pi/agent\n' +
+'nano ~/.pi/agent/models.json'},
+        {title:'~/.pi/agent/models.json · Anthropic option', lang:'json', text:
+'{\n' +
+'  "providers": {\n' +
+'    "agentrouter": {\n' +
+'      "baseUrl": "https://agentrouter.org",\n' +
+'      "api": "anthropic-messages",\n' +
+'      "apiKey": "$AGENTROUTER_API_KEY",\n' +
+'      "models": [\n' +
+'        { "id": "claude-opus-5", "name": "claude-opus-5" }\n' +
+'      ]\n' +
+'    }\n' +
+'  }\n' +
+'}'},
+        {title:'~/.pi/agent/models.json · OpenAI option', lang:'json', text:
+'{\n' +
+'  "providers": {\n' +
+'    "agentrouter": {\n' +
+'      "baseUrl": "https://agentrouter.org/v1",\n' +
+'      "api": "openai-completions",\n' +
+'      "apiKey": "$AGENTROUTER_API_KEY",\n' +
+'      "models": [\n' +
+'        { "id": "gpt-5.5", "name": "gpt-5.5" }\n' +
+'      ]\n' +
+'    }\n' +
+'  }\n' +
+'}'},
+        {title:'Key and launch', lang:'bash', text:
+'export AGENTROUTER_API_KEY="{{KEY}}"\n' +
+'pi'}
+      ],
+      notes:['The installer expects a POSIX system: Pi has no `install.ps1` variant. On Windows, set Pi up inside WSL or Ubuntu; there is no need to run the script in PowerShell.']
+    }
+
+  ]},
+  {
+    title: 'Apps and editors',
+    tools: [
+
+    { id:'claude-app', name:'Claude App', note:'desktop app',
+      ways:[{proto:'Gateway', base:'https://agentrouter.org', models:'the model is picked inside the app itself'}],
+      steps:[
+        'Turn on developer mode: in the top menu go **Help** → **Troubleshooting** → **Enable developer mode**.',
+        'Open the app menu: on Windows that is the button with three lines in the top left corner of the window; on Mac it is the **Claude** menu → **Settings** (`Cmd+,`).',
+        'Go to the **Developer** section and press the **Configure third-party interface** button.',
+        'The gateway settings window opens. You can recognize it by its four fields: **Credential kind**, **Gateway base URL**, **Gateway API key**, **Gateway auth scheme**.',
+        'In **Credential kind** choose the **static api key** option. Without it the key will not be accepted: the app keeps waiting for a different way to authorize.',
+        'In **Gateway base URL** type `https://agentrouter.org`, without `/v1`.',
+        'In **Gateway API key** paste `{{KEY}}`.',
+        'In **Gateway auth scheme** choose `bearer`.',
+        'Press **Apply locally**, then **Relaunch now**: the app closes and opens again by itself.',
+        'After the restart, pick the model from the list in the bottom left corner of the window.',
+        'Check the connection: write "reply with OK only" in the chat.'
+      ],
+      code:[],
+      notes:['While developer mode is off, the **Developer** section and the **Configure third-party interface** button are not in the menu at all. If you cannot find them, go back to the first step and check that **Enable developer mode** really is on.',
+             'In the service documentation this screen is shown with a screenshot only, and the **Credential kind** field is not mentioned there at all, even though filling it in is mandatory. The path through **Developer** → **Configure third-party interface** was verified in the Windows version of the app; in other builds the names may differ a little, so look for the word **Gateway**.']
+    },
+
+    { id:'trae', name:'Trae', note:'code editor',
+      ways:[
+        {proto:'Anthropic Messages', base:'https://agentrouter.org', models:'claude-opus-5 · claude-opus-4-8'},
+        {proto:'OpenAI Completions', base:'https://agentrouter.org', models:'gpt-5.5 · glm-5.2'}
+      ],
+      steps:[
+        'Download Trae from the official site, picking the version for your system, and install it.',
+        'On the first launch, sign in to an account. A personal one is enough: without signing in, the **Models** section and the **Add Model** button are simply unavailable.',
+        'Open **Settings**, then choose **Models** in the list on the left.',
+        'Press **Add Model** and switch to the **Custom Config** tab.',
+        'In **API Format** choose **Anthropic Messages** for the Claude models, or **OpenAI Completions** for `gpt-5.5` and `glm-5.2`.',
+        'In **Custom Request URL** type `https://agentrouter.org`. No `/v1`, and no trailing slash.',
+        'In **Model ID** enter `claude-opus-5` or `claude-opus-4-8`, or else `gpt-5.5` / `glm-5.2`.',
+        'In **API Key** paste `{{KEY}}`.',
+        'Press **Add Model**: the same button at the bottom of the form saves the model.',
+        'Pick the new model in the chat and type "reply with OK only".'
+      ],
+      code:[],
+      notes:['The second exception to the `/v1` rule: with the **Full URL** switch off, Trae builds the path itself, so `/v1` is not appended even for OpenAI Completions.']
+    },
+
+    { id:'cursor', name:'Cursor', note:'code editor',
+      ways:[{proto:'OpenAI Compatible', base:'https://agentrouter.org/v1', models:'gpt-5.5 · glm-5.2'}],
+      steps:[
+        'Download Cursor from the official site, install it and sign in to an account: without signing in, the model settings are closed.',
+        'Open **Cursor Settings**: `Ctrl+Shift+J` (on Mac `Cmd+Shift+J`), or the gear icon in the top right corner of the window.',
+        'Go to the **Models** section.',
+        'Find the **OpenAI API Key** field, paste `{{KEY}}` into it, and turn on the switch next to the field.',
+        'Turn on the **Override OpenAI Base URL** switch, and in the field that appears type `https://agentrouter.org/v1`: here `/v1` is required.',
+        'Save the key with the button next to the field: in different versions it is called **Verify** or **Save**.',
+        'Write "reply with OK only" in the chat.'
+      ],
+      code:[],
+      notes:['On the free plan, Cursor does not let you pick a model by hand even with your own key, only auto mode works. If that gets in the way, take any other editor from the list.',
+             'The service documentation gives no list of available models for Cursor; the working options are the same `gpt-5.5` and `glm-5.2` as for the other OpenAI-compatible clients.']
+    }
+
+  ]}
+  ]
+}
+
 };
 </script>
 
@@ -1381,6 +2322,111 @@ window.ARG = {
   var $ = function (id) { return document.getElementById(id); };
   var LS_KEY = 'arb.key', LS_BASE = 'arb.base', LS_PROXY = 'arb.proxy', LS_GRANT = 'arb.grant';
   var LS_TOK = 'arb.tok', LS_GRANT_SET = 'arb.grantSet';
+
+  /* ---------- язык ----------
+     Заказчик просил спрашивать язык при каждом открытии, поэтому выбор намеренно
+     не сохраняется: страница всегда стартует с окна выбора. Язык живёт только в памяти
+     вкладки, а вся отрисовка идёт через T() — из-за этого смена языка на лету
+     сводится к повторному вызову тех же функций отрисовки. */
+  var LANG_DEFAULT = 'ru';
+  var lang = LANG_DEFAULT;
+  function L() { return window.ARI[lang] || window.ARI[LANG_DEFAULT]; }
+
+  /* T('ключ', a, b) — строка словаря с подстановкой {0}, {1}.
+     Незнакомый ключ возвращаем как есть: пустое место на странице заметить труднее,
+     чем торчащее имя ключа, а тест на такие огрехи всё равно есть. */
+  function T(key) {
+    var d = L(), v = d[key];
+    if (v == null) v = window.ARI[LANG_DEFAULT][key];
+    if (v == null) return key;
+    var args = Array.prototype.slice.call(arguments, 1);
+    return fill(String(v), args);
+  }
+  function fill(s, args) {
+    return s.replace(/\{(\d+)\}/g, function (m, i) {
+      return args[Number(i)] === undefined ? m : String(args[Number(i)]);
+    });
+  }
+  /* Формы слова: словарь сам знает, сколько их в языке и какую выбрать. */
+  function TP(key, n) { return fill(L()._plural(n, L()[key]), [num(n)]); }
+  function num(v) { return C.num(v, L()._locale); }
+  function guides() { return window.ARG[lang] || window.ARG[LANG_DEFAULT]; }
+
+  /* ---------- строки в разметке ----------
+     В разметке остались только id, весь текст приходит отсюда. Ключи с тегами внутри
+     (жирный, code) перечислены в RICH: им нужен innerHTML, остальным хватает textContent. */
+  var STATIC = {
+    brandSub: 'brandSub', topLink: 'topLink', submit: 'submit', forget: 'forget',
+    rememberTxt: 'remember', optsSummary: 'optsSummary', baseLbl: 'optBase',
+    proxyLbl: 'optProxy', proxyHint: 'optProxyHint',
+    brandTail: 'brandTail', gaugeLabel: 'gaugeLabel', grantLbl: 'grantLabel',
+    exactSummary: 'exactSummary', exactText: 'exactText',
+    tokApply: 'tokApply', tokDrop: 'tokDrop', tokHint: 'tokHint',
+    st24: 'st24', st7: 'st7', streq: 'streq', stfc: 'stfc',
+    guidesTitle: 'guidesTitle', cheat1: 'cheat1', cheat2: 'cheat2', cheat3: 'cheat3',
+    chartTitle: 'chartTitle', granHour: 'granHour', granDay: 'granDay',
+    r24h: 'r24h', r7d: 'r7d', r30d: 'r30d', rall: 'rall', rcustom: 'rcustom',
+    dateFrom: 'dateFrom', dateTo: 'dateTo',
+    pSumL: 'pSum', pReqL: 'pReq', pAvgL: 'pAvg', pPeakL: 'pPeak',
+    tblTitle: 'tblTitle', thTime: 'thTime', thModel: 'thModel', thIn: 'thIn',
+    thOut: 'thOut', thResp: 'thResp', thCost: 'thCost',
+    tblEmpty: 'tblEmpty', foot: 'foot'
+  };
+  var RICH = { exactText: 1, cheat1: 1, cheat2: 1, cheat3: 1, foot: 1 };
+  var ARIA = {
+    key: 'keyAria', segs: 'meterAria', tok: 'tokAria', langCtl: 'switchLang',
+    granCtl: 'granAria', rangeCtl: 'rangeAria', modelPick: 'modelAria'
+  };
+
+  /* Смена языка — это переписать разметку словарём и заново вызвать отрисовку. */
+  function applyLang(l) {
+    if (window.ARI[l]) lang = l;
+    var d = L();
+
+    if (document.documentElement) document.documentElement.lang = d.htmlLang;
+    document.title = d.title;
+    var meta = $('metaDesc');
+    if (meta) meta.setAttribute('content', d.metaDesc);
+
+    Object.keys(STATIC).forEach(function (id) {
+      var n = $(id); if (!n) return;
+      if (RICH[id]) n.innerHTML = T(STATIC[id]); else n.textContent = T(STATIC[id]);
+    });
+    Object.keys(ARIA).forEach(function (id) {
+      var n = $(id); if (n) n.setAttribute('aria-label', T(ARIA[id]));
+    });
+
+    var mir = $('baseMirror');
+    if (mir) mir.textContent = (mir.value || 'https://ps.air-outer.com') + ' (' + T('optMirror') + ')';
+
+    /* Эти две надписи зависят не только от языка, но и от того, что сейчас на экране. */
+    var shown = $('key').type === 'text';
+    $('reveal').textContent = T(shown ? 'hide' : 'reveal');
+    $('reveal').setAttribute('aria-label', T(shown ? 'hideAria' : 'revealAria'));
+    $('submit').textContent = state.loading ? T('submitBusy') : T('submit');
+    press('langCtl', 'lang', lang);
+    /* Подпись кнопки берём из словаря того языка, на который она переключает:
+       «Русский» и «English» понятны при любом текущем языке страницы. */
+    Array.prototype.forEach.call($('langCtl').children || [], function (b) {
+      var t = window.ARI[b.dataset.lang];
+      if (t) { b.setAttribute('aria-label', t.langName); b.setAttribute('title', t.langName); }
+    });
+
+    $('guidesCount').textContent = TP('guidesCount', tools().length);
+    if (guideId) showGuide(guideId);
+    else {
+      showGuide(GUIDE_DEFAULT);
+      /* Карточку могли переименовать или убрать — тогда открываем первую по списку,
+         чтобы раздел не остался пустым. showGuide молча выходит, если id не найден. */
+      if (!guideId) showGuide(guides().groups[0].tools[0].id);
+    }
+
+    /* Курс квоты стоит внутри строки подвала, поэтому возвращаем его после переписывания. */
+    if ($('qpu')) $('qpu').textContent = num(state.qpu);
+
+    /* Без данных пересчитывать нечего: возвращаем страницу к виду «ключ ещё не проверяли». */
+    if (state.billing || state.logs.length) renderAll(); else resetView();
+  }
 
   var state = {
     key: '', base: 'https://agentrouter.org', proxy: '',
@@ -1414,17 +2460,16 @@ window.ARG = {
     try {
       res = await fetch(buildUrl(path), { headers: headers, cache: 'no-store', credentials: 'omit' });
     } catch (e) {
-      throw new ApiError('Браузер не смог связаться с ' + hostLabel() + '. Проверьте интернет и блокировщики, ' +
-        'либо выберите зеркало в настройках подключения.', 0);
+      throw new ApiError(T('errNoNet', hostLabel()), 0);
     }
     var text = await res.text();
     var data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { /* не JSON — обработаем ниже */ }
     if (!res.ok) {
       var m = (data && data.error && data.error.message) || (data && data.message) || ('HTTP ' + res.status);
-      throw new ApiError(C.cleanMessage(m), res.status);
+      throw new ApiError(C.cleanMessage(m, T), res.status);
     }
-    if (data === null) throw new ApiError('Сервис вернул не JSON — возможно, запрос перехватил прокси или капча.', res.status);
+    if (data === null) throw new ApiError(T('errNotJson'), res.status);
     return data;
   }
 
@@ -1484,8 +2529,8 @@ window.ARG = {
   async function check() {
     if (state.loading) return;
     state.key = $('key').value.trim();
-    if (!state.key) { showErr('Вставьте ключ — сервис выдаёт его в консоли, строка вида sk-…'); $('key').focus(); return; }
-    if (!/^sk-/.test(state.key)) showWarn('Ключ обычно начинается с <b>sk-</b>. Если скопировали не целиком, баланс не найдётся.');
+    if (!state.key) { showErr(T('errNoKey')); $('key').focus(); return; }
+    if (!/^sk-/.test(state.key)) showWarn(T('warnPrefix'));
     else hide('warn');
     hide('err');
 
@@ -1498,13 +2543,13 @@ window.ARG = {
 
     if (st.status === 'fulfilled' && st.value && st.value.data && st.value.data.quota_per_unit) {
       state.qpu = Number(st.value.data.quota_per_unit) || state.qpu;
-      $('qpu').textContent = C.num(state.qpu);
+      $('qpu').textContent = num(state.qpu);
     }
 
     /* Ключ невалиден — дальше показывать нечего. */
     if (bl.status === 'rejected' && (bl.reason.status === 401 || bl.reason.status === 403)) {
       setLoading(false);
-      showErr('Ключ не принят: ' + bl.reason.message + '. Скопируйте его заново в консоли Agent Router.');
+      showErr(T('errRejected', bl.reason.message));
       resetView();
       return;
     }
@@ -1524,18 +2569,17 @@ window.ARG = {
     state.spend = C.spendOnly(state.logs);
 
     var notes = [];
-    if (bl.status === 'rejected') notes.push('Баланс получить не удалось (' + bl.reason.message + ') — ниже только история трат.');
-    if (lg.status === 'rejected') notes.push('История запросов недоступна (' + lg.reason.message + ') — график пуст.');
+    if (bl.status === 'rejected') notes.push(T('noteBalance', bl.reason.message));
+    if (lg.status === 'rejected') notes.push(T('noteLogs', lg.reason.message));
 
     /* Счёт разбираем здесь, а не в загрузчике: /api/status мог уточнить курс квоты. */
     state.account = null;
     if (state.token) {
       if (ac.status === 'fulfilled') {
         state.account = C.accountFromSelf(ac.value, state.qpu);
-        if (!state.account) notes.push('Токен доступа приняли, но ответ разобрать не вышло — сумма выдачи посчитана приблизительно.');
+        if (!state.account) notes.push(T('noteTokParse'));
       } else {
-        notes.push('Токен доступа не принят (' + ac.reason.message + ') — сумма выдачи посчитана приблизительно. ' +
-          'Сгенерируйте его заново в личных настройках консоли.');
+        notes.push(T('noteTokBad', ac.reason.message));
       }
     }
 
@@ -1544,9 +2588,7 @@ window.ARG = {
     if (state.billing && lg.status === 'fulfilled' && state.spend.length) {
       var byLog = C.sum(state.spend), byService = state.billing.spent;
       if (byService > 0 && Math.abs(byService - byLog) > Math.max(0.02, byService * 0.005)) {
-        notes.push('История неполная: по запросам набирается <b>' + C.usdSmart(byLog) +
-          '</b>, а сервис насчитал <b>' + C.usdSmart(byService) + '</b>. ' +
-          'Остаток посчитан по данным сервиса и верен, а вот график и разбивка по дням занижены.');
+        notes.push(T('noteGap', C.usdSmart(byLog), C.usdSmart(byService)));
       }
     }
     if (notes.length) showWarn(notes.join('<br>')); else hide('warn');
@@ -1558,7 +2600,7 @@ window.ARG = {
   function setLoading(on) {
     state.loading = on;
     $('submit').disabled = on;
-    $('submit').textContent = on ? 'Читаю…' : 'Проверить';
+    $('submit').textContent = on ? T('submitBusy') : T('submit');
   }
 
   function persist() {
@@ -1582,21 +2624,21 @@ window.ARG = {
   function renderAll() { renderBalance(); renderChart(); renderTable(); }
 
   /* ---------- инструкции ---------- */
-  var G = window.ARG, guideId = '';
+  var guideId = '';
   /* Какая инструкция открыта при первом заходе. Claude App спрашивают чаще всего,
      поэтому раздел открывается сразу на ней, а не на первой карточке списка. */
   var GUIDE_DEFAULT = 'claude-app';
 
   function tools() {
     var all = [];
-    G.groups.forEach(function (g) { g.tools.forEach(function (t) { all.push(t); }); });
+    guides().groups.forEach(function (g) { g.tools.forEach(function (t) { all.push(t); }); });
     return all;
   }
 
   /* Ключ подставляется прямо в команды: так его не приходится вставлять руками в каждую строку.
      Пока ключа нет, стоит заметная заглушка, чтобы человек видел, куда его вписать. */
   function keyForGuide() {
-    return state.key || ($('key').value || '').trim() || 'sk-ВАШ-КЛЮЧ';
+    return state.key || ($('key').value || '').trim() || T('keyStub');
   }
   function sub(text) { return String(text).split('{{KEY}}').join(keyForGuide()); }
 
@@ -1610,7 +2652,7 @@ window.ARG = {
 
   function renderPicker() {
     var html = '';
-    G.groups.forEach(function (g) {
+    guides().groups.forEach(function (g) {
       html += '<div class="pgroup"><div class="pgroup__t">' + esc(g.title) + '</div><div class="chips">';
       g.tools.forEach(function (t) {
         html += '<button type="button" class="chip' + (t.id === guideId ? ' is-on' : '') + '"' +
@@ -1632,7 +2674,7 @@ window.ARG = {
       (t.note ? ' <span>' + esc(t.note) + '</span>' : '') + '</h3>';
 
     var mine = state.key || ($('key').value || '').trim();
-    if (mine) h += '<p class="guide__hint">Ваш ключ уже подставлен в поля и команды ниже — их можно копировать как есть.</p>';
+    if (mine) h += '<p class="guide__hint">' + esc(T('guideMine')) + '</p>';
 
     h += '<div class="ways">' + t.ways.map(function (w) {
       return '<div class="way"><span class="way__proto">' + esc(w.proto) + '</span>' +
@@ -1644,7 +2686,7 @@ window.ARG = {
 
     t.code.forEach(function (c, i) {
       h += '<div class="snip"><div class="snip__head"><span>' + esc(c.title) + '</span>' +
-        '<button type="button" class="copy" data-i="' + i + '">копировать</button></div>' +
+        '<button type="button" class="copy" data-i="' + i + '">' + esc(T('copy')) + '</button></div>' +
         '<pre><code>' + esc(sub(c.text)) + '</code></pre></div>';
     });
 
@@ -1662,9 +2704,9 @@ window.ARG = {
     if (!t || !t.code[i]) return;
     var text = sub(t.code[i].text);
     var done = function () {
-      btn.textContent = 'скопировано';
+      btn.textContent = T('copied');
       btn.classList.add('is-done');
-      setTimeout(function () { btn.textContent = 'копировать'; btn.classList.remove('is-done'); }, 1500);
+      setTimeout(function () { btn.textContent = T('copy'); btn.classList.remove('is-done'); }, 1500);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).then(done, function () { copyFallback(text, done); });
@@ -1684,7 +2726,7 @@ window.ARG = {
     state.billing = null; state.account = null; state.logs = []; state.spend = []; state.logsTotal = null;
     $('remain').textContent = '$—';
     $('remain').className = 'gauge__num is-idle';
-    $('remainOf').textContent = 'вставьте ключ, чтобы увидеть баланс';
+    $('remainOf').textContent = T('gaugeIdle');
     $('grantRow').classList.add('hidden');
     $('grantNote').textContent = '';
     drawSegs(0, false);
@@ -1706,7 +2748,7 @@ window.ARG = {
       html += '<div class="' + cls + '" style="--i:' + i + '"></div>';
     }
     $('segs').innerHTML = html;
-    $('segs').setAttribute('aria-label', 'Остаток ' + Math.round(pct * 100) + '% от выданного объёма');
+    $('segs').setAttribute('aria-label', T('meterAriaVal', Math.round(pct * 100)));
   }
 
   function renderBalance() {
@@ -1744,16 +2786,16 @@ window.ARG = {
       var pct = Math.max(0, remain) / grant;
       $('remain').textContent = C.usdSmart(remain);
       $('remain').className = 'gauge__num' + (pct < 0.1 ? ' is-low' : '');
-      var parts = [(g.source === 'limit' ? 'лимит ключа ' : 'выдано ') + (guessed ? '≈' : '') + '<b>' + C.usd(grant) + '</b>',
-                   'потрачено <b>' + C.usd(spent) + '</b>',
-                   '<b>' + Math.round(pct * 100) + '%</b> осталось'];
-      if (b && b.accessUntil > 0) parts.push('ключ действует до <b>' + fmtDate(b.accessUntil) + '</b>');
+      var parts = [T(g.source === 'limit' ? 'ofLimit' : 'ofGrant') + (guessed ? '≈' : '') + '<b>' + C.usd(grant) + '</b>',
+                   T('ofSpent', C.usd(spent)),
+                   T('ofLeft', Math.round(pct * 100))];
+      if (b && b.accessUntil > 0) parts.push(T('ofUntil', fmtDate(b.accessUntil)));
       $('remainOf').innerHTML = parts.join(' · ');
       drawSegs(pct, true);
     } else {
       $('remain').textContent = C.usdSmart(C.sum(state.spend));
       $('remain').className = 'gauge__num is-idle';
-      $('remainOf').textContent = 'это сумма трат по истории — остаток сервис не отдал';
+      $('remainOf').textContent = T('ofNoBalance');
       drawSegs(0, false);
     }
 
@@ -1761,38 +2803,37 @@ window.ARG = {
     var d7 = C.sum(C.since(state.spend, now - 7 * 86400000, now));
     $('s24').textContent = C.usdSmart(d24);
     $('s7').textContent = C.usdSmart(d7);
-    $('sreq').innerHTML = C.num(state.spend.length) +
-      (state.spend.length ? '<small>первый — ' + fmtDate(state.spend[state.spend.length - 1].ts) + '</small>' : '');
+    $('sreq').innerHTML = num(state.spend.length) +
+      (state.spend.length ? '<small>' + T('firstReq', fmtDate(state.spend[state.spend.length - 1].ts)) + '</small>' : '');
 
     var f = b && remain > 0 ? C.forecast(state.spend, remain, now) : { days: null, perDay: 0 };
     if (f.days == null) {
-      $('sfc').innerHTML = '—<small>' + (b && remain > 0 ? 'за неделю трат не было' : 'нужен остаток и история') + '</small>';
+      $('sfc').innerHTML = '—<small>' + T(b && remain > 0 ? 'fcNoWeek' : 'fcNeed') + '</small>';
     } else if (f.days > 365) {
-      $('sfc').innerHTML = '&gt; года<small>' + C.usdSmart(f.perDay) + ' в день</small>';
+      $('sfc').innerHTML = T('fcYear') + '<small>' + T('perDay', C.usdSmart(f.perDay)) + '</small>';
     } else {
       var d = Math.floor(f.days);
-      $('sfc').innerHTML = C.num(d) + ' ' + C.plural(d, 'день', 'дня', 'дней') +
-        '<small>' + C.usdSmart(f.perDay) + ' в день · до ' + fmtDate(f.until.getTime(), true) + '</small>';
+      $('sfc').innerHTML = TP('days', d) +
+        '<small>' + T('fcUntil', C.usdSmart(f.perDay), fmtDate(f.until.getTime(), true)) + '</small>';
     }
 
     var models = C.modelTotals(state.spend);
     var pick = $('modelPick'), prev = state.model;
-    pick.innerHTML = '<option value="all">Все модели</option>' + models.map(function (m) {
+    pick.innerHTML = '<option value="all">' + esc(T('allModels')) + '</option>' + models.map(function (m) {
       return '<option value="' + esc(m.model) + '">' + esc(m.model) + ' — ' + C.usdSmart(m.usd) + '</option>';
     }).join('');
     pick.value = models.some(function (m) { return m.model === prev; }) ? prev : 'all';
     state.model = pick.value;
 
-    $('updated').textContent = 'обновлено ' + new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    $('updated').textContent = T('updated', new Date().toLocaleTimeString(L()._locale, { hour: '2-digit', minute: '2-digit' }));
   }
 
   /* Человек должен видеть, откуда взялась сумма выдачи, а не только саму цифру. */
   function grantNote(g) {
-    if (g.source === 'account') return 'Точная сумма — прочитана с вашего счёта по токену доступа.';
-    if (g.source === 'manual') return 'Вписано вручную. Сервис не сообщает по ключу, сколько всего вам выдали.';
-    if (g.source === 'outgrown') return 'Потрачено больше, чем было указано (' + C.usd(g.manual) +
-      '), — похоже, кредитов начислили ещё. Поставил ' + C.usd(g.value) + ', поправьте, если знаете точную сумму.';
-    return 'Оценка: старт $175. Поправьте поле или добавьте токен доступа ниже.';
+    if (g.source === 'account') return T('grantAccount');
+    if (g.source === 'manual') return T('grantManual');
+    if (g.source === 'outgrown') return T('grantOutgrown', C.usd(g.manual), C.usd(g.value));
+    return T('grantGuess');
   }
 
   function filtered() {
@@ -1830,16 +2871,15 @@ window.ARG = {
     $('xb').textContent = buckets.length ? fmtBucket(buckets[buckets.length - 1].t, state.gran, true) : '';
 
     $('pSum').textContent = C.usdSmart(sum);
-    $('pReq').textContent = C.num(req);
+    $('pReq').textContent = num(req);
     $('pAvg').textContent = req ? C.usdSmart(sum / req) : '—';
     $('pPeak').innerHTML = peak && peak.usd > 0
       ? C.usdSmart(peak.usd) + '<small>' + fmtBucket(peak.t, state.gran) + '</small>'
       : '—';
 
     $('tznote').innerHTML = state.spend.length
-      ? 'Запросы разложены по вашему часовому поясу — ' + tzLabel() +
-        '. В консоли Agent Router сутки считаются по времени сервера, поэтому границы дней могут не совпадать.' +
-        (state.logsTotal != null ? ' Загружено записей: ' + C.num(state.logs.length) + ' из ' + C.num(state.logsTotal) + '.' : '')
+      ? T('tzNote', tzLabel()) +
+        (state.logsTotal != null ? T('tzLoaded', num(state.logs.length), num(state.logsTotal)) : '')
       : '';
   }
 
@@ -1857,8 +2897,8 @@ window.ARG = {
     if (!logs.length) {
       $('rows').innerHTML = '';
       $('tblEmpty').textContent = state.spend.length
-        ? 'По выбранной модели запросов нет.'
-        : 'Запросов по этому ключу пока нет.';
+        ? T('emptyModel')
+        : T('emptyAll');
       $('tblEmpty').classList.remove('hidden');
       $('tblMore').classList.add('hidden');
       return;
@@ -1867,14 +2907,14 @@ window.ARG = {
     $('rows').innerHTML = logs.map(function (l) {
       return '<tr><td class="time">' + fmtDate(l.ts, false, true) + '</td>' +
         '<td class="model">' + esc(l.model) + '</td>' +
-        '<td class="num">' + C.num(l.pt) + '</td>' +
-        '<td class="num">' + C.num(l.ct) + '</td>' +
-        '<td class="num">' + (l.useTime ? l.useTime + ' с' : '—') + '</td>' +
+        '<td class="num">' + num(l.pt) + '</td>' +
+        '<td class="num">' + num(l.ct) + '</td>' +
+        '<td class="num">' + (l.useTime ? l.useTime + ' ' + T('secShort') : '—') + '</td>' +
         '<td class="num">' + C.usdSmart(l.usd) + '</td></tr>';
     }).join('');
     var total = filtered().length;
     $('tblMore').classList.toggle('hidden', total <= 100);
-    $('tblMore').textContent = 'Показаны 100 последних из ' + C.num(total) + '.';
+    $('tblMore').textContent = T('tblMore', num(total));
   }
 
   /* ---------- форматирование ---------- */
@@ -1888,14 +2928,14 @@ window.ARG = {
     var d = new Date(ts);
     if (d.getFullYear() !== new Date().getFullYear()) o.year = 'numeric';
     if (!dateOnly) { o.hour = '2-digit'; o.minute = '2-digit'; if (withSec) o.second = '2-digit'; }
-    return d.toLocaleString('ru-RU', o);
+    return d.toLocaleString(L()._locale, o);
   }
   function fmtBucket(ts, gran, short) {
     var d = new Date(ts);
     if (gran === 'hour') {
-      return d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleString(L()._locale, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
     }
-    return d.toLocaleDateString('ru-RU', short ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'long' });
+    return d.toLocaleDateString(L()._locale, short ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'long' });
   }
 
   /* ---------- подсказка на графике ---------- */
@@ -1903,7 +2943,7 @@ window.ARG = {
   function showTip(bar) {
     if (!tip) { tip = document.createElement('div'); tip.className = 'tip'; $('grid').parentNode.appendChild(tip); }
     var usd = Number(bar.dataset.usd), c = Number(bar.dataset.c), t = Number(bar.dataset.t);
-    tip.innerHTML = '<b>' + C.usdSmart(usd) + '</b> · ' + C.num(c) + ' ' + C.plural(c, 'запрос', 'запроса', 'запросов') +
+    tip.innerHTML = '<b>' + C.usdSmart(usd) + '</b> · ' + TP('reqs', c) +
       '<em>' + fmtBucket(t, state.gran) + '</em>';
     var wrapBox = $('grid').parentNode.getBoundingClientRect(), b = bar.getBoundingClientRect();
     tip.style.left = (b.left - wrapBox.left + b.width / 2) + 'px';
@@ -1918,8 +2958,8 @@ window.ARG = {
   $('reveal').addEventListener('click', function () {
     var i = $('key'), show = i.type === 'password';
     i.type = show ? 'text' : 'password';
-    this.textContent = show ? 'скрыть' : 'показать';
-    this.setAttribute('aria-label', show ? 'Скрыть ключ' : 'Показать ключ');
+    this.textContent = T(show ? 'hide' : 'reveal');
+    this.setAttribute('aria-label', T(show ? 'hideAria' : 'revealAria'));
   });
 
   $('remember').addEventListener('change', function () {
@@ -1968,6 +3008,22 @@ window.ARG = {
     this.classList.add('hidden');
     persist();
     renderBalance();
+  });
+
+  /* Окно выбора языка закрывается только выбором — по-другому его закрыть нельзя,
+     иначе страница осталась бы под затемнением. */
+  $('langGate').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button[data-lang]') : null;
+    if (!b) return;
+    applyLang(b.dataset.lang);
+    $('langGate').classList.add('hidden');
+    $('key').focus();
+  });
+
+  $('langCtl').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b || b.dataset.lang === lang) return;
+    applyLang(b.dataset.lang);
   });
 
   $('picker').addEventListener('click', function (e) {
@@ -2026,13 +3082,10 @@ window.ARG = {
   (function init() {
     drawSegs(0, false);
 
-    /* Инструкции живут отдельно от баланса: они должны работать и без ключа. */
-    var count = tools().length;
-    $('guidesCount').textContent = count + ' ' + C.plural(count, 'программа', 'программы', 'программ');
-    showGuide(GUIDE_DEFAULT);
-    /* Карточку могли переименовать или убрать — тогда открываем первую по списку,
-       чтобы раздел не остался пустым. showGuide молча выходит, если id не найден. */
-    if (!guideId) showGuide(G.groups[0].tools[0].id);
+    /* Язык применяем первым: он заполняет разметку и заодно рисует раздел инструкций,
+       который живёт отдельно от баланса и должен работать без ключа. */
+    applyLang(LANG_DEFAULT);
+    $('gateRu').focus();     /* окно выбора языка открыто — курсор сразу в нём */
 
     var d = new Date(), pad = function (n) { return n < 10 ? '0' + n : '' + n; };
     var iso = function (x) { return x.getFullYear() + '-' + pad(x.getMonth() + 1) + '-' + pad(x.getDate()); };
