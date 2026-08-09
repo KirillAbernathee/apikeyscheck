@@ -343,8 +343,8 @@ code{
 <div class="wrap">
 
   <header class="top">
-    <div class="brand">SAPHIROFF<span>·</span>FUNPAY — остаток</div>
-    <div class="sub">Ключ уходит только на <a href="https://agentrouter.org/console" target="_blank" rel="noopener">agentrouter.org</a>, сервера у страницы нет</div>
+    <div class="brand">SAPHIROFF<span>·</span>KIRILLABERNATHEE — остаток</div>
+    <div class="sub">Ключ уходит только на agentrouter.org, сервера у страницы нет</div>
     <a class="top__link" href="#guides">Как подключить ключ →</a>
   </header>
 
@@ -755,7 +755,6 @@ code{
    где искать экран. Если первоисточник показывает место только картинкой, честно
    говорим об этом в notes, а не выдумываем путь. */
 window.ARG = {
-  console: 'https://agentrouter.org/console/token',
   groups: [
   {
     title: 'Расширения для VS Code',
@@ -1505,8 +1504,7 @@ window.ARG = {
     /* Ключ невалиден — дальше показывать нечего. */
     if (bl.status === 'rejected' && (bl.reason.status === 401 || bl.reason.status === 403)) {
       setLoading(false);
-      showErr('Ключ не принят: ' + bl.reason.message + '. Скопируйте его заново в ' +
-        '<a href="' + state.base + '/console/token" target="_blank" rel="noopener">консоли Agent Router</a>.');
+      showErr('Ключ не принят: ' + bl.reason.message + '. Скопируйте его заново в консоли Agent Router.');
       resetView();
       return;
     }
