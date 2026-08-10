@@ -249,8 +249,9 @@ has('есть claude-opus-4-8', all, 'claude-opus-4-8');
 var head = HTML.slice(0, HTML.indexOf('<script id="i18n">'));
 is('внешних ссылок в разметке нет', head.match(/<a [^>]*href="https?:[^"]*"/g) || [], []);
 hasnt('в ошибке нет ссылки на консоль', app, '<a href="' + '\' + state.base + \'');
-has('надпись обновлена', HTML, 'SAPHIROFF<span>·</span>KIRILLABERNATHEE');
+has('надпись обновлена', HTML, 'SAPHIROFF<span>·</span>CHECKBALANCE');
 hasnt('старой надписи нет', HTML, 'FUNPAY');
+hasnt('прежней второй половины нет', HTML, 'KIRILLABERNATHEE');
 hasnt('памятка без ссылки на консоль', head, 'console/token');
 hasnt('поле console в данных убрано', all, '"console"');
 
